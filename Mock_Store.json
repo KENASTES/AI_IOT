@@ -1,0 +1,52 @@
+[
+  {
+    "Store_Name": "ป้าแจ๋ว อาหารตามสั่ง",
+    "Location": "ซอย 1 ข้างมหาวิทยาลัย",
+    "Source_Url": "https://maps.app.goo.gl/mock1",
+    "Is_Active": true,
+    "Store_Picture_Source": "https://example.com/pajaew.jpg",
+    "Menu": [
+      {
+        "Menu_Name": "ข้าวกะเพราหมูสับไข่ดาว",
+        "Price_THB": 50,
+        "Allergens": [],
+        "Tags": ["spicy", "quick", "comfort"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://example.com/kaprao.jpg"
+      },
+      {
+        "Menu_Name": "ข้าวผัดต้มยำกุ้ง",
+        "Price_THB": 60,
+        "Allergens": ["seafood"],
+        "Tags": ["spicy"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://example.com/tomyum.jpg"
+      }
+    ]
+  },
+  {
+    "Store_Name": "Healthy Bowl (สลัดผักคลีนๆ)",
+    "Location": "โรงอาหารตึกกลาง",
+    "Source_Url": "https://maps.app.goo.gl/mock2",
+    "Is_Active": true,
+    "Store_Picture_Source": "https://example.com/healthy.jpg",
+    "Menu": [
+      {
+        "Menu_Name": "สลัดอกไก่ย่าง",
+        "Price_THB": 65,
+        "Allergens": [],
+        "Tags": ["healthy"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://example.com/salad1.jpg"
+      },
+      {
+        "Menu_Name": "สลัดแซลมอน",
+        "Price_THB": 89,
+        "Allergens": ["seafood"],
+        "Tags": ["healthy", "social"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://example.com/salad2.jpg"
+      }
+    ]
+  }
+]

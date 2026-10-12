@@ -1,113 +1,47 @@
-"""MongoDB persistence for saved Forkast food scenarios.
+from pymongo import MongoClient
+from datetime import datetime
 
-Configuration is read from environment variables so credentials never belong in
-source code:
-    MONGODB_URI          Required MongoDB connection string.
-    MONGODB_DATABASE     Optional; defaults to ``forkast_ai_food``.
-    MONGODB_COLLECTION   Optional; defaults to ``saved_scenarios``.
-"""
+# เชื่อมต่อกับ MongoDB (ใช้ localhost เพราะรันบนเครื่องตัวเอง)
+MONGO_URI = "mongodb://localhost:27017/"
+client = MongoClient(MONGO_URI)
 
-from __future__ import annotations
+# สร้าง/เรียกใช้ Database และ Collection
+db = client["forkast_db"]
+ingredients_collection = db["ingredient_price_reference"]
+memory_collection = db["saved_scenarios"]
 
-import os
-from datetime import datetime, timezone
-from typing import Any, Mapping, Sequence
+def seed_mock_ingredients():
+    """ฟังก์ชันสำหรับใส่ข้อมูลวัตถุดิบและราคาตั้งต้น (Run แค่ครั้งแรก)"""
+    
+    # ข้อมูลจำลอง (Mock Data) สำหรับ MVP
+    mock_data = [
+        {"ingredient": "ไข่ไก่", "unit": "ฟอง", "price_thb": 5, "last_verified_at": datetime.now()},
+        {"ingredient": "หมูสับ", "unit": "100 กรัม", "price_thb": 15, "last_verified_at": datetime.now()},
+        {"ingredient": "เนื้อไก่", "unit": "100 กรัม", "price_thb": 10, "last_verified_at": datetime.now()},
+        {"ingredient": "กะหล่ำปลี", "unit": "1 หัว", "price_thb": 20, "last_verified_at": datetime.now()},
+        {"ingredient": "ข้าวหอมมะลิ (หุงแล้ว)", "unit": "1 ถ้วย", "price_thb": 10, "last_verified_at": datetime.now()},
+        {"ingredient": "กุ้งสด", "unit": "100 กรัม", "price_thb": 35, "last_verified_at": datetime.now()},
+        {"ingredient": "กระเทียม", "unit": "1 หัว", "price_thb": 5, "last_verified_at": datetime.now()}
+    ]
+    
+    # เช็คว่ามีข้อมูลอยู่แล้วหรือยัง ถ้ายังไม่มีให้ Insert ลงไป
+    if ingredients_collection.count_documents({}) == 0:
+        ingredients_collection.insert_many(mock_data)
+        print("Seeded mock ingredients successfully!")
+    else:
+        print("Data already exists in database.")
 
-from pymongo import ASCENDING, MongoClient
-from pymongo.collection import Collection
-from pymongo.errors import ConfigurationError, PyMongoError, ServerSelectionTimeoutError
+def get_all_ingredients():
+    """ฟังก์ชันให้เพื่อน (AI/UI) ดึงข้อมูลวัตถุดิบทั้งหมดไปใช้"""
+    # ดึงข้อมูลทั้งหมดโดยไม่เอาฟิลด์ _id ของ Mongo ไปด้วย
+    return list(ingredients_collection.find({}, {"_id": 0}))
 
-
-class DatabaseServiceError(RuntimeError):
-    """Raised when a Food Memory operation cannot be completed."""
-
-
-class MongoFoodMemory:
-    """Small, reusable repository for the application's Food Memory feature."""
-
-    def __init__(
-        self,
-        mongo_uri: str | None = None,
-        database_name: str | None = None,
-        collection_name: str | None = None,
-        server_selection_timeout_ms: int = 5_000,
-    ) -> None:
-        uri = mongo_uri or os.getenv("MONGODB_URI")
-        if not uri:
-            raise DatabaseServiceError(
-                "MongoDB is not configured. Set the MONGODB_URI environment variable."
-            )
-
-        self._database_name = database_name or os.getenv(
-            "MONGODB_DATABASE", "forkast_ai_food"
-        )
-        self._collection_name = collection_name or os.getenv(
-            "MONGODB_COLLECTION", "saved_scenarios"
-        )
-
-        try:
-            self._client = MongoClient(
-                uri,
-                serverSelectionTimeoutMS=server_selection_timeout_ms,
-                connectTimeoutMS=server_selection_timeout_ms,
-                retryWrites=True,
-            )
-            # Fail early with a clear error instead of failing only after the user
-            # presses Save in the UI.
-            self._client.admin.command("ping")
-            self._collection: Collection[dict[str, Any]] = self._client[
-                self._database_name
-            ][self._collection_name]
-            self._ensure_indexes()
-        except (ConfigurationError, ServerSelectionTimeoutError, PyMongoError) as exc:
-            raise DatabaseServiceError("Could not connect to MongoDB.") from exc
-
-    def _ensure_indexes(self) -> None:
-        """Create an index used by a future Food Memory/history screen."""
-        try:
-            self._collection.create_index(
-                [("saved_at", ASCENDING)], name="saved_at_ascending"
-            )
-        except PyMongoError as exc:
-            raise DatabaseServiceError("Could not prepare MongoDB indexes.") from exc
-
-    def save_scenario(
-        self,
-        scenario: Mapping[str, Any],
-        initial_ingredients: Sequence[str] | str,
-        constraints: Mapping[str, Any] | None = None,
-    ) -> str:
-        """Insert one selected scenario and return its MongoDB document id.
-
-        ``scenario`` is deliberately stored as the complete model response. This
-        preserves the menu, estimates, and instructions shown to the user at the
-        time they saved it.
-        """
-        if not isinstance(scenario, Mapping) or not scenario.get("menu_name"):
-            raise ValueError("scenario must contain a non-empty 'menu_name'.")
-
-        ingredients = _normalise_ingredients(initial_ingredients)
-        if not ingredients:
-            raise ValueError("At least one initial ingredient is required.")
-
-        document = {
-            "scenario": dict(scenario),
-            "initial_ingredients": ingredients,
-            "constraints": dict(constraints or {}),
-            "saved_at": datetime.now(timezone.utc),
-        }
-        try:
-            result = self._collection.insert_one(document)
-        except PyMongoError as exc:
-            raise DatabaseServiceError("Could not save the food scenario.") from exc
-        return str(result.inserted_id)
-
-    def close(self) -> None:
-        """Release MongoDB client resources (useful on application shutdown)."""
-        self._client.close()
-
-
-def _normalise_ingredients(ingredients: Sequence[str] | str) -> list[str]:
-    """Convert a comma-separated input or sequence into clean, unique values."""
-    values = ingredients.split(",") if isinstance(ingredients, str) else ingredients
-    return list(dict.fromkeys(item.strip() for item in values if item and item.strip()))
+# สำหรับทดสอบรันไฟล์นี้ตรงๆ
+if __name__ == "__main__":
+    print("Testing Database Connection...")
+    seed_mock_ingredients()
+    
+    print("\n--- Current Ingredients in DB ---")
+    items = get_all_ingredients()
+    for item in items:
+        print(f"{item['ingredient']} - {item['price_thb']} บาท / {item['unit']}")
