@@ -8,13 +8,23 @@ services:
     restart: unless-stopped
 
   webapp:
-    build: .
+    build: 
+      context: ./Food-Match-GitHub  # ชี้ไปหาโฟลเดอร์โค้ดของเพื่อน
+      dockerfile: Dockerfile
     ports:
-      - "8501:8501"
+      - "5173:5173"  # เปลี่ยนเป็น 3000 สำหรับ Next.js
     depends_on:
       - mongodb
     environment:
       - MONGODB_URI=mongodb://mongodb:27017/
+    restart: unless-stopped
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --url http://127.0.0.1:5173 --http-host-header localhost
+    network_mode: "service:webapp"
+    depends_on:
+      - webapp
     restart: unless-stopped
 
 volumes:
