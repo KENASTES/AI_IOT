@@ -1,0 +1,10 @@
+.git
+.env
+.env.*
+!.env.example
+node_modules
+.next
+.vinext
+__pycache__
+*.py[cod]
+mongo_local_data
