@@ -13,6 +13,10 @@ const { d1, r2 } = hostingConfig;
 // macOS Seatbelt blocks FSEvents, so Codex previews need polling for HMR.
 const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
 const managedLinux = readExecutionProfile() === "managed-linux";
+const publicAllowedHosts = (process.env.FOOD_MATCH_ALLOWED_HOSTS ?? "")
+  .split(",")
+  .map((host) => host.trim())
+  .filter(Boolean);
 
 const localBindingConfig = {
   main: "./build/sites-worker.ts",
@@ -53,8 +57,17 @@ export default defineConfig(async ({ command }) => {
 
   return {
     server: {
-      ...(managedLinux
-        ? { host: "0.0.0.0", allowedHosts: ["terminal.local"] }
+      proxy: {
+        // MongoDB lives on the private Docker network, so the Vite development
+        // server proxies this API to a regular Node.js service.
+        "/api/food/rank": {
+          target: process.env.FOOD_API_ORIGIN ?? "http://127.0.0.1:3001",
+          changeOrigin: true,
+        },
+      },
+      ...(managedLinux ? { host: "0.0.0.0" } : {}),
+      ...(managedLinux || publicAllowedHosts.length > 0
+        ? { allowedHosts: [...(managedLinux ? ["terminal.local"] : []), ...publicAllowedHosts] }
         : {}),
       ...(isCodexSeatbeltSandbox
         ? { watch: { useFsEvents: false, usePolling: true } }

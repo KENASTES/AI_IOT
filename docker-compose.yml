@@ -4,6 +4,10 @@ services:
     volumes:
       - mongo_local_data:/data/db
     restart: unless-stopped
+    networks:
+      default:
+        aliases:
+          - mongo
     healthcheck:
       test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
       interval: 10s
@@ -18,20 +22,44 @@ services:
     ports:
       - "5173:5173"  # เปลี่ยนเป็น 3000 สำหรับ Next.js
     depends_on:
-      mongodb:
+      food-api:
         condition: service_healthy
+    environment:
+      FOOD_API_ORIGIN: http://food-api:3001
+      FOOD_MATCH_ALLOWED_HOSTS: ${FOOD_MATCH_ALLOWED_HOSTS:-}
+    restart: unless-stopped
+
+  food-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["node", "server/food-api.mjs"]
     env_file:
       - .env
     environment:
-      MONGODB_URI: mongodb://mongodb:27017/
+      MONGODB_URI: ${MONGODB_URI:-mongodb://mongodb:27017/forkast_ai_food}
+      MONGODB_DATABASE: ${MONGODB_DATABASE:-forkast_ai_food}
+      MONGODB_COLLECTION: ${MONGODB_COLLECTION:-Store_catalog}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     restart: unless-stopped
 
+  # Matches the Pi setup shown in the screenshot: cloudflared shares the
+  # webapp network namespace and forwards its Quick Tunnel to localhost:5173.
   cloudflared:
     image: cloudflare/cloudflared:latest
-    command: tunnel --url http://127.0.0.1:5173 --http-host-header localhost
+    command: ["tunnel", "--url", "http://127.0.0.1:5173", "--http-host-header", "localhost"]
     network_mode: "service:webapp"
     depends_on:
-      - webapp
+      webapp:
+        condition: service_started
     restart: unless-stopped
 
 volumes:
