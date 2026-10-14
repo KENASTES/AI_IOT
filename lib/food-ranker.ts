@@ -27,6 +27,7 @@ export type FoodRankPreferences = {
 export type FoodRankResponse = {
   provider: "database";
   recommendations: FoodRecommendation[];
+  explanation?: { provider: "gemini" | "database"; message: string };
   message?: string;
   evaluatedCriteria?: string[];
   unsupportedCriteria?: string[];
@@ -55,6 +56,7 @@ export async function rankFilteredFoods(
   return {
     provider: result.provider as FoodRankResponse["provider"],
     recommendations: result.recommendations,
+    explanation: result.explanation,
     message: result.message,
     evaluatedCriteria: result.evaluatedCriteria,
     unsupportedCriteria: result.unsupportedCriteria,

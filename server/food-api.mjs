@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import { MongoClient } from "mongodb";
 import { scoreCandidates } from "./food-ranking.mjs";
+import { explainRecommendations } from "./food-explainer.mjs";
 
 const PORT = Number(process.env.FOOD_API_PORT || 3001);
 const MAX_BODY_BYTES = 64 * 1024;
@@ -152,9 +153,15 @@ const server = createServer(async (request, response) => {
   }
 
   const result = scoreCandidates(candidates, payload.preferences, payload.maxBudgetThb);
+  const explained = await explainRecommendations(
+    result.recommendations.slice(0, 2),
+    payload.preferences,
+    payload.maxBudgetThb,
+  );
   sendJson(response, 200, {
     ...result,
-    recommendations: result.recommendations.slice(0, 2),
+    recommendations: explained.recommendations,
+    explanation: { provider: explained.provider, message: explained.message },
     provider: "database",
   });
 });
