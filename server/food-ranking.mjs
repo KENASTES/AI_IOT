@@ -19,7 +19,8 @@ const preferenceRules = {
 function normalizedTags(candidate) {
   return new Set((Array.isArray(candidate.tags) ? candidate.tags : [])
     .filter((tag) => typeof tag === "string")
-    .map((tag) => tag.trim().toLocaleLowerCase("th")));
+    .map((tag) => tag.trim().toLocaleLowerCase("th"))
+    .map((tag) => tag === "hearty" ? "filling" : tag));
 }
 
 /**

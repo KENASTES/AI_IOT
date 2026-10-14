@@ -128,7 +128,10 @@ const server = createServer(async (request, response) => {
     || !Array.isArray(payload.allergies) || payload.allergies.length > 30
     || payload.allergies.some((item) => typeof item !== "string" || item.length > 100)
     || !payload.preferences || typeof payload.preferences !== "object"
-    || ["time", "hunger", "mood", "goal"].some((key) => typeof payload.preferences[key] !== "string" || payload.preferences[key].length > 100)) {
+    || ["time", "hunger", "mood", "goal"].some((key) => typeof payload.preferences[key] !== "string" || payload.preferences[key].length > 100)
+    || (payload.recentMenuIds !== undefined && (!Array.isArray(payload.recentMenuIds)
+      || payload.recentMenuIds.length > 20
+      || payload.recentMenuIds.some((id) => typeof id !== "string" || id.length > 200)))) {
     sendJson(response, 400, { error: "Provide a query, valid maximum budget, and allergy list" });
     return;
   }
@@ -154,9 +157,10 @@ const server = createServer(async (request, response) => {
 
   const result = scoreCandidates(candidates, payload.preferences, payload.maxBudgetThb);
   const explained = await explainRecommendations(
-    result.recommendations.slice(0, 2),
+    result.recommendations,
     payload.preferences,
     payload.maxBudgetThb,
+    payload.recentMenuIds || [],
   );
   sendJson(response, 200, {
     ...result,

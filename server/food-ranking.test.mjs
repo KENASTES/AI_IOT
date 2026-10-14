@@ -39,3 +39,13 @@ test("scores are deterministic for the same preferences and database data", () =
   assert.deepEqual(first.recommendations, second.recommendations);
   assert.deepEqual(first.unsupportedCriteria, ["ความหลากหลาย (ยังไม่มีประวัติเมนูที่ผู้ใช้เคยเลือก)"]);
 });
+
+test("treats the existing hearty tag as the filling preference", () => {
+  const result = scoreCandidates([
+    { id: "hearty", price: 40, tags: ["hearty"] },
+    { id: "other", price: 40, tags: ["quick"] },
+  ], { hunger: "หิวจนตาลาย" }, 60);
+
+  assert.equal(result.recommendations[0].id, "hearty");
+  assert.equal(result.unsupportedCriteria.includes("ระดับความอิ่ม (filling)"), false);
+});

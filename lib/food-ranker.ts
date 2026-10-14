@@ -38,13 +38,14 @@ export async function rankFilteredFoods(
   query: string,
   constraints: FoodRankConstraints,
   preferences: FoodRankPreferences,
+  recentMenuIds: string[] = [],
 ): Promise<FoodRankResponse> {
   if (!query.trim()) throw new Error("A food preference query is required");
 
   const response = await fetch("/api/food/rank", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query, ...constraints, preferences }),
+    body: JSON.stringify({ query, ...constraints, preferences, recentMenuIds }),
   });
   const result = await response.json() as Partial<FoodRankResponse> & { error?: string };
   if (!response.ok) throw new Error(result.error || "Could not load food recommendations");
