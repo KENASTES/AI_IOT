@@ -170,14 +170,22 @@ export async function explainRecommendations(recommendations, preferences, budge
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
-          responseFormat: { text: { mimeType: "application/json", schema } },
+          // Gemini 2.5 Flash uses the GenerateContent responseMimeType/responseSchema
+          // fields. The newer responseFormat wrapper is for Gemini 3+ models.
+          responseMimeType: "application/json",
+          responseSchema: schema,
           temperature: 0.1,
           maxOutputTokens: 300,
         },
       }),
       signal: AbortSignal.timeout(8000),
     });
-    if (!response.ok) throw new Error(`Gemini returned HTTP ${response.status}`);
+    if (!response.ok) {
+      // Keep the upstream explanation to diagnose bad model/schema/API settings;
+      // never log request headers or the API key.
+      const details = (await response.text()).slice(0, 500);
+      throw new Error(`Gemini returned HTTP ${response.status}: ${details}`);
+    }
 
     const body = await response.json();
     const text = body?.candidates?.[0]?.content?.parts?.find((part) => typeof part.text === "string")?.text;

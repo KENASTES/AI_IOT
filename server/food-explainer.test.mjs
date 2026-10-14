@@ -13,7 +13,8 @@ test("Gemini can select only reason codes supported by MongoDB facts", async () 
     apiKey: "test-key",
     fetchImpl: async (_url, options) => {
       const request = JSON.parse(options.body);
-      assert.equal(request.generationConfig.responseFormat.text.mimeType, "application/json");
+      assert.equal(request.generationConfig.responseMimeType, "application/json");
+      assert.equal(request.generationConfig.responseSchema.properties.items.type, "array");
       return {
         ok: true,
         json: async () => ({ candidates: [{ content: { parts: [{ text: JSON.stringify({ items: [
