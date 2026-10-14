@@ -1,10 +1,9 @@
 import { createServer } from "node:http";
 import { MongoClient } from "mongodb";
+import { scoreCandidates } from "./food-ranking.mjs";
 
 const PORT = Number(process.env.FOOD_API_PORT || 3001);
 const MAX_BODY_BYTES = 64 * 1024;
-const HF_MODEL = "BAAI/bge-reranker-v2-m3";
-const HF_ENDPOINT = `https://router.huggingface.co/hf-inference/models/${HF_MODEL}`;
 
 const allergyAliases = {
   seafood: ["seafood", "fish", "shellfish", "shrimp", "prawn", "crab", "squid", "oyster", "กุ้ง", "ปลา", "อาหารทะเล"],
@@ -89,58 +88,6 @@ function buildCandidates(stores, maxBudgetThb, allergies) {
   return candidates.slice(0, 200);
 }
 
-function localRank(query, candidates) {
-  const normalizedQuery = query.trim().toLocaleLowerCase("th");
-  const terms = normalizedQuery.split(/[\s,，;；/]+/u).filter((term) => term.length >= 2);
-  return candidates.map(({ id, text }) => {
-    const description = text.toLocaleLowerCase("th");
-    const score = terms.reduce((total, term) => total + (description.includes(term) ? 1 : 0), 0)
-      + (normalizedQuery.length >= 2 && description.includes(normalizedQuery) ? 2 : 0);
-    return { id, score };
-  }).sort((a, b) => b.score - a.score || a.id.localeCompare(b.id));
-}
-
-function scoreFrom(value) {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      const score = scoreFrom(item);
-      if (score !== null) return score;
-    }
-  }
-  if (value && typeof value === "object" && "score" in value) {
-    const score = Number(value.score);
-    if (Number.isFinite(score)) return score;
-  }
-  return null;
-}
-
-async function rankWithHuggingFace(query, candidates) {
-  const token = process.env.HF_TOKEN;
-  if (!token) return null;
-  const response = await fetch(HF_ENDPOINT, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      inputs: candidates.map(({ text }) => ({ text: query, text_pair: text })),
-      parameters: { function_to_apply: "none" },
-    }),
-    signal: AbortSignal.timeout(60_000),
-    cache: "no-store",
-  });
-  if (!response.ok) return null;
-  const values = await response.json();
-  const rows = Array.isArray(values) && values.length === candidates.length
-    ? values
-    : Array.isArray(values) && values.length === 1 && Array.isArray(values[0]) && values[0].length === candidates.length
-      ? values[0]
-      : null;
-  if (!rows) return null;
-  const scores = rows.map((value, index) => ({ id: candidates[index].id, score: scoreFrom(value) }));
-  if (scores.some((item) => item.score === null)) return null;
-  return scores.sort((a, b) => b.score - a.score);
-}
-
 function sendJson(response, status, body) {
   response.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
   response.end(JSON.stringify(body));
@@ -178,7 +125,9 @@ const server = createServer(async (request, response) => {
     || typeof payload.maxBudgetThb !== "number" || !Number.isFinite(payload.maxBudgetThb)
     || payload.maxBudgetThb < 0 || payload.maxBudgetThb > 10000
     || !Array.isArray(payload.allergies) || payload.allergies.length > 30
-    || payload.allergies.some((item) => typeof item !== "string" || item.length > 100)) {
+    || payload.allergies.some((item) => typeof item !== "string" || item.length > 100)
+    || !payload.preferences || typeof payload.preferences !== "object"
+    || ["time", "hunger", "mood", "goal"].some((key) => typeof payload.preferences[key] !== "string" || payload.preferences[key].length > 100)) {
     sendJson(response, 400, { error: "Provide a query, valid maximum budget, and allergy list" });
     return;
   }
@@ -198,26 +147,16 @@ const server = createServer(async (request, response) => {
   }
 
   if (candidates.length === 0) {
-    sendJson(response, 200, { recommendations: [], provider: "local", message: "ไม่มีเมนูที่ผ่านงบและเงื่อนไขการแพ้" });
+    sendJson(response, 200, { recommendations: [], provider: "database", message: "ไม่มีเมนูที่ผ่านงบและเงื่อนไขการแพ้" });
     return;
   }
 
-  let scores;
-  let provider;
-  try {
-    scores = await rankWithHuggingFace(payload.query, candidates);
-    provider = scores ? "huggingface" : process.env.HF_TOKEN ? "local-fallback" : "local";
-  } catch {
-    scores = null;
-    provider = "local-fallback";
-  }
-  scores ??= localRank(payload.query, candidates);
-  const scoreById = new Map(scores.map(({ id, score }) => [id, score]));
-  const recommendations = candidates
-    .map((candidate) => ({ ...candidate, score: scoreById.get(candidate.id) ?? 0 }))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 2);
-  sendJson(response, 200, { recommendations, provider });
+  const result = scoreCandidates(candidates, payload.preferences, payload.maxBudgetThb);
+  sendJson(response, 200, {
+    ...result,
+    recommendations: result.recommendations.slice(0, 2),
+    provider: "database",
+  });
 });
 
 server.listen(PORT, "0.0.0.0", () => {

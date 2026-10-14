@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
-import { rankFilteredFoods } from "@/lib/food-ranker";
+import { rankFilteredFoods, type FoodRankPreferences } from "@/lib/food-ranker";
 
 type Profile = { name: string; allergies: string; dislikes: string; monthlyBudget: number; dailyBudget: number };
 type Scenario = { id: string; badge: string; name: string; shop: string; price: number; location: string; score: number; reason: string; image: string; tags: string[]; color: string; sourceUrl: string };
@@ -95,12 +95,12 @@ function AppShell({ profile, onReset }: { profile: Profile; onReset: () => void 
   const [screen, setScreen] = useState<"quiz" | "discover" | "memory" | "budget">("quiz"); const [toast, setToast] = useState("");
   const [rankQuery, setRankQuery] = useState(""); const [rankedScenarios, setRankedScenarios] = useState<Scenario[]>([]); const [rankStatus, setRankStatus] = useState("รอคำตอบเพื่อจัดอันดับ");
   const [rankConstraints, setRankConstraints] = useState({ maxBudgetThb: profile.dailyBudget, allergies: profile.allergies.split(/[,，]/u).map((item) => item.trim()).filter(Boolean) });
+  const [rankPreferences, setRankPreferences] = useState<FoodRankPreferences>({ time: "", hunger: "", mood: "", goal: "" });
   useEffect(() => { if (!toast) return; const id = window.setTimeout(() => setToast(""), 3000); return () => window.clearTimeout(id); }, [toast]);
   useEffect(() => {
     if (screen !== "discover" || !rankQuery) return;
     let active = true;
-    setRankStatus("กำลังค้นเมนูที่ผ่านงบและ allergy จากฐานข้อมูล…");
-    rankFilteredFoods(rankQuery, rankConstraints)
+    rankFilteredFoods(rankQuery, rankConstraints, rankPreferences)
       .then(({ provider, recommendations, message }) => {
         if (!active) return;
         setRankedScenarios(recommendations.map((item) => ({
@@ -110,20 +110,20 @@ function AppShell({ profile, onReset }: { profile: Profile; onReset: () => void 
           shop: item.storeName,
           price: item.price,
           location: item.location,
-          score: Math.round(100 / (1 + Math.exp(-item.score))),
-          reason: `ผ่านตัวกรองงบ ฿${rankConstraints.maxBudgetThb} และอาหารที่แพ้ · จัดอันดับจากคำตอบของคุณ`,
+          score: item.score,
+          reason: item.matchReasons.join(" · "),
           image: item.image,
           tags: item.tags,
           color: item.tags.includes("spicy") ? "#ffb62e" : "#d7ff52",
           sourceUrl: item.sourceUrl,
         })));
-        setRankStatus(message || (provider === "huggingface" ? "ค้นจาก MongoDB และจัดอันดับด้วย Hugging Face" : "ค้นจาก MongoDB และจัดอันดับในเครื่อง"));
+        setRankStatus(message || `เทียบคำตอบกับงบและข้อมูลเมนูใน MongoDB (${provider})`);
       })
       .catch((error: unknown) => { if (active) { setRankedScenarios([]); setRankStatus(error instanceof Error ? error.message : "ค้นเมนูจากฐานข้อมูลไม่สำเร็จ"); } });
     return () => { active = false; };
-  }, [rankQuery, rankConstraints, screen]);
+  }, [rankQuery, rankConstraints, rankPreferences, screen]);
   useEffect(() => { const context = (document as Document & { modelContext?: { registerTool?: (tool: unknown, options?: unknown) => void } }).modelContext; if (!context?.registerTool) return; const lifecycle = new AbortController(); try { context.registerTool({ name: "start_food_match", title: "เริ่ม Food Match", description: "เปิดหน้าค้นหา Food Scenario ที่เหมาะกับผู้ใช้", inputSchema: { type: "object", properties: {}, additionalProperties: false }, annotations: { readOnlyHint: false, untrustedContentHint: false }, execute: async () => { setScreen("quiz"); return { status: "started" }; } }, { signal: lifecycle.signal }); context.registerTool({ name: "select_food_scenario", title: "เลือกมื้ออาหาร", description: "เลือก Food Scenario จากรหัสเมนูที่แสดง", inputSchema: { type: "object", properties: { scenarioId: { type: "string" } }, required: ["scenarioId"], additionalProperties: false }, annotations: { readOnlyHint: false, untrustedContentHint: false }, execute: async (input: unknown) => { const id = String((input as {scenarioId?: string})?.scenarioId); const s = rankedScenarios.find((x) => x.id === id); if (!s) throw new Error("ไม่พบรหัสเมนูนี้ในผลลัพธ์ปัจจุบัน"); setToast(`เลือก ${s.name} แล้ว`); setScreen("memory"); return { status: "selected", name: s.name, price: s.price }; } }, { signal: lifecycle.signal }); } catch {} return () => lifecycle.abort(); }, [rankedScenarios]);
-  if (screen === "quiz") return <Quiz onDone={(answers) => { setRankQuery(answers.join("; ")); setRankConstraints({ maxBudgetThb: budgetFromAnswer(answers[0], profile.dailyBudget), allergies: profile.allergies.split(/[,，]/u).map((item) => item.trim()).filter(Boolean) }); setScreen("discover"); }} onBack={onReset} />;
+  if (screen === "quiz") return <Quiz onDone={(answers) => { setRankStatus("กำลังค้นเมนูที่ผ่านงบและ allergy จากฐานข้อมูล…"); setRankQuery(answers.join("; ")); setRankPreferences({ time: answers[1] ?? "", hunger: answers[2] ?? "", mood: answers[3] ?? "", goal: answers[4] ?? "" }); setRankConstraints({ maxBudgetThb: budgetFromAnswer(answers[0], profile.dailyBudget), allergies: profile.allergies.split(/[,，]/u).map((item) => item.trim()).filter(Boolean) }); setScreen("discover"); }} onBack={onReset} />;
   return <main className="min-h-dvh bg-[#f6f4ee] text-[#17151c]"><header className="sticky top-0 z-30 border-b border-black/5 bg-[#f6f4ee]/90 backdrop-blur-xl"><div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 md:px-10"><Logo/><div className="hidden items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-bold shadow-sm sm:flex"><Navigation className="size-4 text-[#ff5b4d]"/>โรงอาหารวิศวะ ลาดกระบัง</div><button onClick={onReset} className="grid size-11 place-items-center rounded-full bg-white shadow-sm" aria-label="แก้ไขโปรไฟล์"><UserRound className="size-5"/></button></div></header>
     {screen === "discover" && <section className="mx-auto grid max-w-7xl gap-10 px-5 pb-32 pt-8 lg:grid-cols-[.72fr_1.28fr] lg:px-10 lg:pt-12"><div className="lg:sticky lg:top-32 lg:self-start"><div className="text-sm font-black tracking-[.18em] text-[#ff5b4d]">2 FOOD SCENARIOS</div><h1 className="mt-2 text-5xl font-black leading-[.93] tracking-[-.06em] md:text-7xl">เลือกด้วย<br/>ความรู้สึก.<br/><span className="text-[#ff5b4d]">มั่นใจด้วย AI.</span></h1><div className="mt-7 rounded-[26px] bg-white p-5 shadow-sm"><div className="flex items-center gap-3"><span className="grid size-11 place-items-center rounded-2xl bg-[#d7ff52]"><Sparkles className="size-5"/></span><div><b className="block">ทำไมถึงได้ 2 ใบนี้?</b><span className="text-sm font-semibold text-black/45">ค้นจากร้านและเมนูใน MongoDB</span></div></div><p className="mt-4 text-sm font-semibold leading-6 text-black/55">{rankStatus}</p></div><button onClick={() => setScreen("quiz")} className="mt-5 flex items-center gap-2 text-sm font-black text-black/45"><RotateCcw className="size-4"/>เปลี่ยนคำตอบ 5 วินาที</button></div><SwipeDeck items={rankedScenarios} onPicked={(s) => { setToast(`เลือก ${s.name} จาก ${s.shop} ราคา ฿${s.price}`); setScreen("budget"); }} /></section>}
     {screen === "memory" && <Memory/>}{screen === "budget" && <Budget profile={profile}/>}<nav className="fixed inset-x-0 bottom-4 z-40 mx-auto flex w-[min(92%,430px)] items-center justify-around rounded-[24px] border border-white/60 bg-[#17151c]/95 px-3 py-2 text-white shadow-[0_18px_50px_rgba(0,0,0,.25)] backdrop-blur">{[{id:"discover",icon:Flame,label:"Match"},{id:"memory",icon:History,label:"Memory"},{id:"budget",icon:WalletCards,label:"งบของฉัน"}].map(({id,icon:Icon,label})=><button key={id} onClick={()=>setScreen(id as "discover"|"memory"|"budget")} className={`flex min-w-24 flex-col items-center gap-1 rounded-2xl px-4 py-2 text-xs font-black transition ${screen===id?"bg-[#ff5b4d]":"text-white/55 hover:text-white"}`}><Icon className={`size-5 ${screen===id&&id==="discover"?"fill-current":""}`}/>{label}</button>)}</nav>{toast && <div className="fixed left-1/2 top-24 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full bg-[#17151c] px-5 py-3 text-sm font-black text-white shadow-xl"><Check className="size-5 text-[#d7ff52]"/>{toast}</div>}</main>;

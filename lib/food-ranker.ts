@@ -9,6 +9,7 @@ export type FoodRecommendation = {
   sourceUrl: string;
   text: string;
   score: number;
+  matchReasons: string[];
 };
 
 export type FoodRankConstraints = {
@@ -16,28 +17,38 @@ export type FoodRankConstraints = {
   allergies: string[];
 };
 
+export type FoodRankPreferences = {
+  time: string;
+  hunger: string;
+  mood: string;
+  goal: string;
+};
+
 export type FoodRankResponse = {
-  provider: "huggingface" | "local" | "local-fallback";
+  provider: "database";
   recommendations: FoodRecommendation[];
   message?: string;
+  evaluatedCriteria?: string[];
+  unsupportedCriteria?: string[];
 };
 
 /** The server loads eligible menu candidates from MongoDB and ranks them. */
 export async function rankFilteredFoods(
   query: string,
   constraints: FoodRankConstraints,
+  preferences: FoodRankPreferences,
 ): Promise<FoodRankResponse> {
   if (!query.trim()) throw new Error("A food preference query is required");
 
   const response = await fetch("/api/food/rank", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query, ...constraints }),
+    body: JSON.stringify({ query, ...constraints, preferences }),
   });
   const result = await response.json() as Partial<FoodRankResponse> & { error?: string };
   if (!response.ok) throw new Error(result.error || "Could not load food recommendations");
   if (!Array.isArray(result.recommendations)
-    || !["huggingface", "local", "local-fallback"].includes(result.provider ?? "")) {
+    || result.provider !== "database") {
     throw new Error("Food recommendation response is invalid");
   }
 
@@ -45,5 +56,7 @@ export async function rankFilteredFoods(
     provider: result.provider as FoodRankResponse["provider"],
     recommendations: result.recommendations,
     message: result.message,
+    evaluatedCriteria: result.evaluatedCriteria,
+    unsupportedCriteria: result.unsupportedCriteria,
   };
 }
