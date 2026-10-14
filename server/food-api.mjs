@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 import { scoreCandidates } from "./food-ranking.mjs";
 import { explainRecommendations } from "./food-explainer.mjs";
 
@@ -37,6 +37,81 @@ async function getStoreCollection() {
   return client
     .db(process.env.MONGODB_DATABASE || "forkast_ai_food")
     .collection(process.env.MONGODB_COLLECTION || "Store_catalog");
+}
+
+async function getDatabase() {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) throw new Error("MONGODB_URI is not configured");
+  if (!mongoClientPromise) {
+    mongoClient = new MongoClient(uri, {
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 5000,
+      maxPoolSize: 10,
+    });
+    mongoClientPromise = mongoClient.connect().catch((error) => {
+      mongoClient = undefined;
+      mongoClientPromise = undefined;
+      throw error;
+    });
+  }
+  const client = await mongoClientPromise;
+  return client.db(process.env.MONGODB_DATABASE || "forkast_ai_food");
+}
+
+function validClientId(value) {
+  return typeof value === "string" && /^[a-f0-9-]{16,64}$/iu.test(value);
+}
+
+async function getStats(clientId) {
+  const database = await getDatabase();
+  const storeCollection = database.collection(process.env.MONGODB_COLLECTION || "Store_catalog");
+  const stores = await storeCollection.find({ Is_Active: { $ne: false } }, { projection: { Menu: 1 } }).limit(500).toArray();
+  const storeCount = stores.length;
+  const menuCount = stores.reduce((count, store) => count + (Array.isArray(store.Menu)
+    ? store.Menu.filter((menu) => typeof menu?.Menu_Name === "string" && typeof menu?.Price_THB === "number" && menu.Blacklist !== true).length
+    : 0), 0);
+  const memoryCount = validClientId(clientId)
+    ? await database.collection("food_memories").countDocuments({ clientId })
+    : 0;
+  return { storeCount, menuCount, memoryCount };
+}
+
+async function listMemories(clientId) {
+  if (!validClientId(clientId)) throw new Error("A valid clientId is required");
+  const database = await getDatabase();
+  const collection = database.collection("food_memories");
+  const [items, count] = await Promise.all([
+    collection.find({ clientId }).sort({ savedAt: -1 }).limit(30).toArray(),
+    collection.countDocuments({ clientId }),
+  ]);
+  return { items, count };
+}
+
+async function saveMemory(clientId, menuId) {
+  if (!validClientId(clientId) || typeof menuId !== "string") throw new Error("A valid clientId and menuId are required");
+  const [storeId, indexText] = menuId.split(":");
+  if (!ObjectId.isValid(storeId) || !/^\d{1,4}$/u.test(indexText || "")) throw new Error("Invalid menuId");
+  const store = await (await getStoreCollection()).findOne({ _id: new ObjectId(storeId), Is_Active: { $ne: false } }, {
+    projection: { Store_Name: 1, Location: 1, Menu: 1 },
+  });
+  const menu = store?.Menu?.[Number(indexText)];
+  if (!menu || typeof menu.Menu_Name !== "string" || typeof menu.Price_THB !== "number" || menu.Blacklist === true) {
+    throw new Error("Menu not found or unavailable");
+  }
+  const record = {
+    clientId,
+    menuId,
+    menuName: menu.Menu_Name,
+    storeName: store.Store_Name || "ร้านอาหาร",
+    location: store.Location || "",
+    price: menu.Price_THB,
+    image: typeof menu.Menu_Picture_Source === "string" && /^https:\/\//u.test(menu.Menu_Picture_Source)
+      ? menu.Menu_Picture_Source
+      : "/food-noodles.jpg",
+    savedAt: new Date(),
+  };
+  const result = await (await getDatabase()).collection("food_memories").insertOne(record);
+  return { ...record, _id: result.insertedId };
 }
 
 function normalizeAllergies(values) {
@@ -108,6 +183,38 @@ async function readJson(request) {
 const server = createServer(async (request, response) => {
   if (request.method === "GET" && request.url === "/health") {
     sendJson(response, 200, { status: "ok" });
+    return;
+  }
+  const url = new URL(request.url || "/", "http://localhost");
+  if (request.method === "GET" && url.pathname === "/api/food/stats") {
+    try {
+      sendJson(response, 200, await getStats(url.searchParams.get("clientId")));
+    } catch (error) {
+      console.error("MongoDB stats lookup failed:", error.message);
+      sendJson(response, 503, { error: "Could not load live food statistics" });
+    }
+    return;
+  }
+  if (request.method === "GET" && url.pathname === "/api/food/memory") {
+    try {
+      const memory = await listMemories(url.searchParams.get("clientId"));
+      sendJson(response, 200, memory);
+    } catch (error) {
+      console.error("MongoDB memory lookup failed:", error.message);
+      sendJson(response, 503, { error: "Could not load food memory" });
+    }
+    return;
+  }
+  if (request.method === "POST" && url.pathname === "/api/food/memory") {
+    let payload;
+    try {
+      payload = await readJson(request);
+      const item = await saveMemory(payload?.clientId, payload?.menuId);
+      sendJson(response, 201, { item });
+    } catch (error) {
+      console.error("MongoDB memory save failed:", error.message);
+      sendJson(response, 400, { error: error.message || "Could not save food memory" });
+    }
     return;
   }
   if (request.method !== "POST" || request.url !== "/api/food/rank") {

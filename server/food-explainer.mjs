@@ -87,7 +87,8 @@ function makeSelectionPool(recommendations, recentIds) {
   const fresh = recommendations.filter((candidate) => !recent.has(candidate.id));
   const candidates = fresh.length >= 2 ? fresh : recommendations;
   if (candidates.length <= 2) return candidates;
-  const scoreFloor = candidates[0].score - 15;
+  // Keep a reasonable relevance band while allowing more distinct menus to rotate in.
+  const scoreFloor = candidates[0].score - 25;
   const nearTop = candidates.filter((candidate) => candidate.score >= scoreFloor);
   return (nearTop.length >= 2 ? nearTop : candidates).slice(0, 30);
 }

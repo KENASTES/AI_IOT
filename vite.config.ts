@@ -64,6 +64,14 @@ export default defineConfig(async ({ command }) => {
           target: process.env.FOOD_API_ORIGIN ?? "http://127.0.0.1:3001",
           changeOrigin: true,
         },
+        "/api/food/stats": {
+          target: process.env.FOOD_API_ORIGIN ?? "http://127.0.0.1:3001",
+          changeOrigin: true,
+        },
+        "/api/food/memory": {
+          target: process.env.FOOD_API_ORIGIN ?? "http://127.0.0.1:3001",
+          changeOrigin: true,
+        },
       },
       ...(managedLinux ? { host: "0.0.0.0" } : {}),
       ...(managedLinux || publicAllowedHosts.length > 0
