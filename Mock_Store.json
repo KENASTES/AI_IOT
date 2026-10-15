@@ -1,0 +1,672 @@
+[
+  {
+    "Store_Name": "One-Dish Meals",
+    "Location": "โรงอาหาร A คณะวิศวกรรมศาสตร์ สจล.",
+    "Source_Url": "https://www.wongnai.com/restaurants/307198VL",
+    "Is_Active": true,
+    "Store_Picture_Source": "https://img.wongnai.com/p/1920x0/2018/02/17/c36218d78b4e41efa7fe42bf98d436b7.jpg",
+    "Menu": [
+      {
+        "Menu_Name": "ข้าวกะเพราหมูสับไข่ข้น",
+        "Price_THB": 50,
+        "Allergens": ["egg", "pork"],
+        "Tags": ["thai", "rice", "pork", "spicy", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://s359.kapook.com/pagebuilder/e137d82b-66e9-4b8a-ae60-c04ff707bc61.jpg"
+      },
+      {
+        "Menu_Name": "ข้าวต้มหมู",
+        "Price_THB": 35,
+        "Allergens": ["pork"],
+        "Tags": ["thai", "soup", "rice", "pork", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTA4Mf-ybP77QTuoASWvJhzn7cK6LuH4LuCU5u-dvbLTo4oEgIHyew7nUbx&s=10"
+      },
+      {
+        "Menu_Name": "ข้าวกะเพราเบคอนไข่ข้น",
+        "Price_THB": 70,
+        "Allergens": ["egg", "pork"],
+        "Tags": ["thai", "rice", "pork", "spicy", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://img.wongnai.com/p/1920x0/2022/06/09/8275c2c4a6c7400ebf547dcf4a48ca41.jpg"
+      },
+      {
+        "Menu_Name": "ข้าวพะแนงหมู",
+        "Price_THB": 40,
+        "Allergens": ["peanut", "pork"],
+        "Tags": ["thai", "rice", "curry", "pork", "spicy"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://img.wongnai.com/p/1920x0/2022/06/09/c3d7ddb5cc6747adae4a0716beea9b9d.jpg"
+      },
+      {
+        "Menu_Name": "ผัดฉ่าทะเลราดข้าว",
+        "Price_THB": 50,
+        "Allergens": ["seafood"],
+        "Tags": ["thai", "rice", "seafood", "spicy", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://img.wongnai.com/p/1920x0/2022/06/09/623fd0b6cc384eaaabf2eb057edb08e5.jpg"
+      }
+    ]
+  },
+  {
+    "Store_Name": "ร้านอิสลามฟู้ด",
+    "Location": "โรงอาหาร A คณะวิศวกรรมศาสตร์ สจล.",
+    "Source_Url": "https://www.wongnai.com/restaurants/174000Cn",
+    "Is_Active": true,
+    "Store_Picture_Source": "https://www.foodequipment.co.th/wp-content/uploads/2025/01/4-12.jpg",
+    "Menu": [
+      {
+        "Menu_Name": "ข้าวผัดอเมริกัน",
+        "Price_THB": 60,
+        "Allergens": ["egg"],
+        "Tags": ["halal", "rice", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://www.foodequipment.co.th/wp-content/uploads/2025/01/4-12.jpg"
+      },
+      {
+        "Menu_Name": "ข้าวหมกไก่",
+        "Price_THB": 55,
+        "Allergens": [],
+        "Tags": ["halal", "rice", "chicken", "hearty"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://homeyselect.co/wp-content/uploads/2024/04/%E0%B8%82%E0%B9%89%E0%B8%B2%E0%B8%A7%E0%B8%AB%E0%B8%A1%E0%B8%81%E0%B9%84%E0%B8%81%E0%B9%88-%E0%B8%94%E0%B9%89%E0%B8%A7%E0%B8%A2-Instant-Pot-%E0%B8%AA%E0%B8%B9%E0%B8%95%E0%B8%A3%E0%B8%9E%E0%B8%A5%E0%B8%9E%E0%B8%A3%E0%B8%A3%E0%B8%84%E0%B8%99%E0%B8%B1%E0%B8%81%E0%B8%9B%E0%B8%A3%E0%B8%B8%E0%B8%87.jpg"
+      },
+      {
+        "Menu_Name": "ข้าวกะเพราไก่ไข่ดาว",
+        "Price_THB": 55,
+        "Allergens": ["egg"],
+        "Tags": ["halal", "thai", "rice", "chicken", "spicy", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRS1iPDSS0rtNm0dVNppe7ctE9z5109bWi1KKOQ1NbJ9h7bq4QmuDHMp34&s=10"
+      },
+      {
+        "Menu_Name": "ข้าวผัดไก่",
+        "Price_THB": 50,
+        "Allergens": ["egg"],
+        "Tags": ["halal", "rice", "chicken", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://f.ptcdn.info/417/073/000/qssbwr1wxazE05EBKiF-o.jpg"
+      },
+      {
+        "Menu_Name": "ข้าวแกงมัสมั่นไก่",
+        "Price_THB": 55,
+        "Allergens": ["peanut"],
+        "Tags": ["halal", "rice", "curry", "chicken"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSz2_-lzyr5rrKvEhbY2b3JKjtnGYYp4j7Zd9uL5pc4KSWI8vXBptI8INc&s=10"
+      }
+    ]
+  },
+  {
+    "Store_Name": "ร้าน 11",
+    "Location": "โรงอาหาร A คณะวิศวกรรมศาสตร์ สจล.",
+    "Source_Url": "https://www.wongnai.com/restaurants/2332817jI",
+    "Is_Active": true,
+    "Store_Picture_Source": "https://img.wongnai.com/p/1920x0/2023/05/31/968606dd35bf448ba9cf55d611b738ca.jpg",
+    "Menu": [
+      {
+        "Menu_Name": "ข้าวหน้าไก่ทอดเทอริยากิ",
+        "Price_THB": 45,
+        "Allergens": [],
+        "Tags": ["japanese", "rice", "fried", "chicken", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://img.wongnai.com/p/1920x0/2023/05/31/968606dd35bf448ba9cf55d611b738ca.jpg"
+      },
+      {
+        "Menu_Name": "ผัดมาม่าไก่ทอด",
+        "Price_THB": 40,
+        "Allergens": ["wheat"],
+        "Tags": ["noodle", "fried", "chicken", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://img.wongnai.com/p/1920x0/2023/06/02/a7b357f04a7042fbb8d477ae6e5bae6e.jpg"
+      },
+      {
+        "Menu_Name": "ข้าวไข่ข้นเขียวหวานไก่ทอด",
+        "Price_THB": 50,
+        "Allergens": ["egg"],
+        "Tags": ["thai", "rice", "curry", "fried", "chicken", "hearty"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://scontent.fbkk22-4.fna.fbcdn.net/v/t39.30808-6/490444298_9738500962877768_5837238975726511764_n.jpg?stp=dst-jpg_tt6&cstp=mx2048x2048&ctp=s2048x2048&_nc_cat=106&_nc_map=urlgen_bucketless&ccb=1-7&_nc_sid=127cfc&_nc_ohc=atpsP6mJRnkQ7kNvwHRKwsE&_nc_oc=AdqPXi4uNOSLnMX0P03yKOYzJ8Xwbk-A7zT3md7Ql3KcGHL0dRX5KZ-L2nVNnIW36Ws&_nc_zt=23&_nc_ht=scontent.fbkk22-4.fna&_nc_gid=66Lz0ZguYN3vY6AO-p5LjA&_nc_ss=7b2a8&oh=00_AQOx4LEh791x6LFslDvbdLlSGnMiAH7uv3knUO6V_eZKOA&oe=6AD35CE9"
+      },
+      {
+        "Menu_Name": "ข้าวกะเพราไก่ทอดไข่ข้น",
+        "Price_THB": 60,
+        "Allergens": ["egg"],
+        "Tags": ["thai", "rice", "fried", "chicken", "spicy", "quick", "hearty"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://img.wongnai.com/p/1920x0/2023/06/01/ea42ef05a2134d61bfeb2f488962289a.jpg"
+      },
+      {
+        "Menu_Name": "ข้าวไก่ทอดผัดผงกะหรี่",
+        "Price_THB": 60,
+        "Allergens": ["egg"],
+        "Tags": ["thai", "rice", "fried", "chicken", "quick", "hearty"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://img.wongnai.com/p/1920x0/2023/06/02/0fa6019fed77453399bee80e243d0fe0.jpg"
+      }
+    ]
+  },
+  {
+    "Store_Name": "ร้านก๋วยเตี๋ยวต้องโดน",
+    "Location": "โรงอาหาร A คณะวิศวกรรมศาสตร์ สจล.",
+    "Source_Url": "https://www.wongnai.com/restaurants/565784EB",
+    "Is_Active": true,
+    "Store_Picture_Source": "https://img.wongnai.com/p/1920x0/2018/02/07/493f40d1a7e0449f8320c8eeb9259693.jpg",
+    "Menu": [
+      {
+        "Menu_Name": "ก๋วยเตี๋ยวน้ำตก",
+        "Price_THB": 35,
+        "Allergens": ["pork"],
+        "Tags": ["thai", "noodle", "soup", "pork", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://obs-ect.line-scdn.net/r/ect/ect/cj0tNmY0dGJtcnNiczV2byZzPWpwNiZ0PW0mdT0xZnZjYWEwYzQ0YTAwJmk9MA"
+      },
+      {
+        "Menu_Name": "ก๋วยเตี๋ยวน้ำตกต้มยำ",
+        "Price_THB": 35,
+        "Allergens": ["pork"],
+        "Tags": ["thai", "noodle", "soup", "pork", "spicy", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://www.lemon8-app.com/seo/image?item_id=7311633116563522049&index=0&sign=b1b981aafa8d8e5d76e73a235b94fa2d"
+      },
+      {
+        "Menu_Name": "ก๋วยเตี๋ยวแห้ง",
+        "Price_THB": 35,
+        "Allergens": ["pork"],
+        "Tags": ["thai", "noodle", "pork", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRoAcTO35uC5LjoNfmmlD1onemk_Gbw-ArvHH0ZElhRl6sGVkKpQDWpe0Q&s=10"
+      },
+      {
+        "Menu_Name": "ก๋วยเตี๋ยวแห้งต้มยำ",
+        "Price_THB": 35,
+        "Allergens": ["pork"],
+        "Tags": ["thai", "noodle", "pork", "spicy", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://img.wongnai.com/p/1920x0/2017/01/24/11bf0e1e80de4570a519cb0e8177361c.jpg"
+      },
+      {
+        "Menu_Name": "ก๋วยเตี๋ยวต้มยำไข่ออนเซ็น",
+        "Price_THB": 45,
+        "Allergens": ["egg", "pork"],
+        "Tags": ["thai", "noodle", "soup", "pork", "spicy", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://img.wongnai.com/p/1920x0/2018/02/07/493f40d1a7e0449f8320c8eeb9259693.jpg"
+      }
+    ]
+  },
+  {
+    "Store_Name": "ร้านครัวป้าต้อ",
+    "Location": "โรงอาหาร A คณะวิศวกรรมศาสตร์ สจล.",
+    "Source_Url": "",
+    "Is_Active": true,
+    "Store_Picture_Source": "https://img.wongnai.com/p/1968x0/2018/06/26/676bcf6e113f469d97ef0d7f59727e85.jpg",
+    "Menu": [
+      {
+        "Menu_Name": "ข้าวไก่ทอด",
+        "Price_THB": 30,
+        "Allergens": [],
+        "Tags": ["thai", "rice", "fried", "chicken", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://img.wongnai.com/p/256x256/2024/05/17/3b1365369ba2425aba5d6df41a2f997b.jpg"
+      },
+      {
+        "Menu_Name": "ข้าวหมูสไลด์ญี่ปุ่น",
+        "Price_THB": 50,
+        "Allergens": ["pork"],
+        "Tags": ["japanese", "rice", "pork", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://img.wongnai.com/p/1968x0/2018/06/26/676bcf6e113f469d97ef0d7f59727e85.jpg"
+      },
+      {
+        "Menu_Name": "ข้าวหมูทอด",
+        "Price_THB": 40,
+        "Allergens": ["pork"],
+        "Tags": ["thai", "rice", "fried", "pork", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://thaitabloid.com/wp-content/uploads/2025/07/1000086438.jpg"
+      },
+      {
+        "Menu_Name": "ข้าวยำไก่แซ่บ",
+        "Price_THB": 40,
+        "Allergens": [],
+        "Tags": ["thai", "rice", "chicken", "spicy", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://img.wongnai.com/p/1920x0/2020/11/07/95ce4ec6055a4e02a650c1c58dd41849.jpg"
+      },
+      {
+        "Menu_Name": "ข้าวหมูทอดทงคัตสึ",
+        "Price_THB": 45,
+        "Allergens": ["pork", "wheat"],
+        "Tags": ["japanese", "rice", "fried", "pork", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://f.ptcdn.info/239/069/000/q9nm0a1twbcndxU8aCC8-o.jpg"
+      }
+    ]
+  },
+  {
+    "Store_Name": "ร้านโหงวเฮ้ง ข้าวมันไก่",
+    "Location": "โรงอาหาร A คณะวิศวกรรมศาสตร์ สจล.",
+    "Source_Url": "",
+    "Is_Active": true,
+    "Store_Picture_Source": "https://static.thairath.co.th/media/dFQROr7oWzulq5Fa6rpOetuLxWtDW4pGVxTIT2bhWuo8KUmcxGVIisEysxd9YsSVQ0b.jpg",
+    "Menu": [
+      {
+        "Menu_Name": "ข้าวมันไก่ต้ม",
+        "Price_THB": 35,
+        "Allergens": [],
+        "Tags": ["thai", "rice", "chicken", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://static.thairath.co.th/media/dFQROr7oWzulq5Fa6rpOetuLxWtDW4pGVxTIT2bhWuo8KUmcxGVIisEysxd9YsSVQ0b.jpg"
+      },
+      {
+        "Menu_Name": "ข้าวมันไก่ทอด",
+        "Price_THB": 35,
+        "Allergens": [],
+        "Tags": ["thai", "rice", "fried", "chicken", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://fit-d.com/uploads/food/832dcfd881dd34fdbcf716b31967f99a.jpg"
+      },
+      {
+        "Menu_Name": "ข้าวมันไก่ย่าง",
+        "Price_THB": 35,
+        "Allergens": [],
+        "Tags": ["thai", "rice", "chicken", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRmWatdXTg8jRrf5Yx4zluTft27eY9TxfkBzlnwySQlga931OOeqi15pI9B&s=10"
+      },
+      {
+        "Menu_Name": "ข้าวมันปลาทอด",
+        "Price_THB": 35,
+        "Allergens": ["seafood"],
+        "Tags": ["thai", "rice", "fried", "seafood", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://cfcdn2.azsg.opensnap.com/azsg/snapphoto/photo/LB/GU6A/3BQKOB1CF536A2D439EBB6lv.jpg"
+      }
+    ]
+  },
+  {
+    "Store_Name": "ร้านยูกิ",
+    "Location": "โรงอาหาร A คณะวิศวกรรมศาสตร์ สจล.",
+    "Source_Url": "",
+    "Is_Active": true,
+    "Store_Picture_Source": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRED0Mux0-pXHdKonLVOnjZ64CHJkGHt_OtUkY6P8aRWy2_Q9REfxAsMdE&s=10",
+    "Menu": [
+      {
+        "Menu_Name": "ต้มเลือดหมู",
+        "Price_THB": 40,
+        "Allergens": ["pork"],
+        "Tags": ["thai", "soup", "pork", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ8mQh2echsu0qHSmGKEh2ynkjJfAWRJFED9MWnWfzHxSh_A1vapoj-VtU&s=10"
+      },
+      {
+        "Menu_Name": "ข้าวไข่เจียวทรงเครื่อง",
+        "Price_THB": 30,
+        "Allergens": ["egg", "pork"],
+        "Tags": ["thai", "rice", "pork", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://img.wongnai.com/p/1920x0/2019/03/08/a25b48f4509344fcad6e7ed652cc8232.jpg"
+      },
+      {
+        "Menu_Name": "ข้าวกะเพราไข่เยี่ยวม้า",
+        "Price_THB": 45,
+        "Allergens": ["egg", "pork"],
+        "Tags": ["thai", "rice", "pork", "spicy", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://www.unileverfoodsolutions.co.th/dam/global-ufs/mcos/SEA/calcmenu/recipes/TH-recipes/rice-dishes/rice-with-fried-egg-and-crispy-basil/main-header.jpg"
+      },
+      {
+        "Menu_Name": "ข้าวผัดต้มยำ",
+        "Price_THB": 40,
+        "Allergens": ["egg"],
+        "Tags": ["thai", "rice", "spicy", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRED0Mux0-pXHdKonLVOnjZ64CHJkGHt_OtUkY6P8aRWy2_Q9REfxAsMdE&s=10"
+      },
+      {
+        "Menu_Name": "ข้าวผัดแหนม",
+        "Price_THB": 40,
+        "Allergens": ["egg", "pork"],
+        "Tags": ["thai", "rice", "pork", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://s359.kapook.com/pagebuilder/e4ccd008-7268-48c6-b043-ab75446698a4.jpg"
+      }
+    ]
+  },
+  {
+    "Store_Name": "ร้านอาหารตามสั่ง A7",
+    "Location": "โรงอาหาร A คณะวิศวกรรมศาสตร์ สจล.",
+    "Source_Url": "",
+    "Is_Active": true,
+    "Store_Picture_Source": "https://img.wongnai.com/p/400x0/2019/11/12/1648ce3757054791a7a7717b8185bdd6.jpg",
+    "Menu": [
+      {
+        "Menu_Name": "ข้าวหมูทอดกระเทียม",
+        "Price_THB": 35,
+        "Allergens": ["pork"],
+        "Tags": ["thai", "rice", "fried", "pork", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://img.wongnai.com/p/400x0/2019/11/12/1648ce3757054791a7a7717b8185bdd6.jpg"
+      },
+      {
+        "Menu_Name": "ก๋วยเตี๋ยวคั่วไก่",
+        "Price_THB": 40,
+        "Allergens": ["egg"],
+        "Tags": ["thai", "noodle", "chicken", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://www.ajinomoto.co.th/storage/photos/shares/Recipe/Menu/lot2-8/6172a16f330ed.jpg"
+      },
+      {
+        "Menu_Name": "ข้าวปลาราดพริก",
+        "Price_THB": 40,
+        "Allergens": ["seafood"],
+        "Tags": ["thai", "rice", "seafood", "spicy", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://img.wongnai.com/p/1920x0/2016/06/28/adb79450fff1445485481cac91736a83.jpg"
+      },
+      {
+        "Menu_Name": "มาม่าผัดขี้เมาหมู",
+        "Price_THB": 40,
+        "Allergens": ["wheat", "pork"],
+        "Tags": ["thai", "noodle", "pork", "spicy", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://img.kapook.com/u/pirawan/Cooking1/spicy-fried-noodle.jpg"
+      },
+      {
+        "Menu_Name": "ข้าวไก่ทอดกระเทียม",
+        "Price_THB": 35,
+        "Allergens": [],
+        "Tags": ["thai", "rice", "fried", "chicken", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://www.bloggang.com/data/f/foodmmp/picture/1550194351.jpg"
+      }
+    ]
+  },
+  {
+    "Store_Name": "ร้านลุงขาหมู เจ้าเก่าโรงC",
+    "Location": "โรงอาหาร A คณะวิศวกรรมศาสตร์ สจล.",
+    "Source_Url": "",
+    "Is_Active": true,
+    "Store_Picture_Source": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQsObYHynr7m0dijOZyHU9f4OxcdxtYt38O0yL683kEwWxqpczzZ_NvxnMU&s=10",
+    "Menu": [
+      {
+        "Menu_Name": "ข้าวขาหมูเนื้อ-หนัง",
+        "Price_THB": 40,
+        "Allergens": ["pork"],
+        "Tags": ["thai", "rice", "pork", "hearty"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQsObYHynr7m0dijOZyHU9f4OxcdxtYt38O0yL683kEwWxqpczzZ_NvxnMU&s=10"
+      },
+      {
+        "Menu_Name": "ข้าวขาหมูคากิ",
+        "Price_THB": 60,
+        "Allergens": ["pork"],
+        "Tags": ["thai", "rice", "pork", "hearty"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://img.wongnai.com/p/400x0/2020/10/24/cd4310f8de33461cba263c19cc641565.jpg"
+      },
+      {
+        "Menu_Name": "ข้าวขาหมูคาจัก",
+        "Price_THB": 55,
+        "Allergens": ["pork"],
+        "Tags": ["thai", "rice", "pork", "hearty"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTTZcI3kxVYpop2SoJuxjcktOtk5K7-Jbk_kmDCMSWo96n9ux58Zfqg0p2e&s=10"
+      },
+      {
+        "Menu_Name": "ข้าวหมูอบ",
+        "Price_THB": 40,
+        "Allergens": ["pork"],
+        "Tags": ["thai", "rice", "pork", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://www.pim.in.th/images/all-one-dish-food/kao-moo-ob/004.JPG"
+      },
+      {
+        "Menu_Name": "ข้าวขาหมูใส่ไข่",
+        "Price_THB": 50,
+        "Allergens": ["egg", "pork"],
+        "Tags": ["thai", "rice", "pork", "hearty"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://static.naewna.com/uploads/files2017/images/image010(191).jpg"
+      }
+    ]
+  },
+  {
+    "Store_Name": "ร้านหมูกรอบ",
+    "Location": "โรงอาหาร C คณะวิศวกรรมศาสตร์ สจล.",
+    "Source_Url": "",
+    "Is_Active": true,
+    "Store_Picture_Source": "https://fit-d.com/uploads/food/fe516afdfa8f9672c967bbf014012f04.jpg",
+    "Menu": [
+      {
+        "Menu_Name": "พริกแกงหมูกรอบ",
+        "Price_THB": 45,
+        "Allergens": ["pork"],
+        "Tags": ["thai", "rice", "pork", "spicy", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://similanseafood.com/wp-content/uploads/2024/11/%E0%B8%9C%E0%B8%B1%E0%B8%94%E0%B8%9E%E0%B8%A3%E0%B8%B4%E0%B8%81%E0%B9%81%E0%B8%81%E0%B8%87%E0%B8%AB%E0%B8%A1%E0%B8%B9%E0%B8%81%E0%B8%A3%E0%B8%AD%E0%B8%9A.png"
+      },
+      {
+        "Menu_Name": "ข้าวกะเพราหมูกรอบ",
+        "Price_THB": 45,
+        "Allergens": ["pork"],
+        "Tags": ["thai", "rice", "pork", "spicy", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://fit-d.com/uploads/food/fe516afdfa8f9672c967bbf014012f04.jpg"
+      },
+      {
+        "Menu_Name": "ข้าวหมูกรอบทอดน้ำปลา",
+        "Price_THB": 45,
+        "Allergens": ["pork"],
+        "Tags": ["thai", "rice", "fried", "pork", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcThxeRwcid6RVMdahFwt7wGea6PzhIsPjcfZfNjcy1omuqtT7w9m_FwkptU&s=10"
+      },
+      {
+        "Menu_Name": "คะน้าหมูกรอบ",
+        "Price_THB": 45,
+        "Allergens": ["pork"],
+        "Tags": ["thai", "rice", "pork", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSAq6mozSDqjv-NqW49W3mPCitDIiMBZy0vkyXppDTjB1yj9t-HPr0NWEmu&s=10"
+      },
+      {
+        "Menu_Name": "หมูผัดน้ำมันหอย",
+        "Price_THB": 40,
+        "Allergens": ["pork"],
+        "Tags": ["thai", "rice", "pork", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://img.wongnai.com/p/1920x0/2019/04/11/d42fc6501dd44a53a6403e46c45fc9a3.jpg"
+      }
+    ]
+  },
+  {
+    "Store_Name": "E-SAN INTER",
+    "Location": "โรงอาหาร C คณะวิศวกรรมศาสตร์ สจล.",
+    "Source_Url": "",
+    "Is_Active": true,
+    "Store_Picture_Source": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ6wypdWq4hWkU04qNFyE9HnGKCNJEgX5OoI71qUJP03G60kGIOabRnfgE2&s=10",
+    "Menu": [
+      {
+        "Menu_Name": "ตำไทย",
+        "Price_THB": 40,
+        "Allergens": ["peanut", "seafood"],
+        "Tags": ["isan", "salad", "spicy", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ6wypdWq4hWkU04qNFyE9HnGKCNJEgX5OoI71qUJP03G60kGIOabRnfgE2&s=10"
+      },
+      {
+        "Menu_Name": "ข้าวไก่ย่างน้ำจิ้มแจ่ว",
+        "Price_THB": 35,
+        "Allergens": [],
+        "Tags": ["isan", "rice", "chicken", "spicy", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRKGAD1aLorDBhdXzUOH-yLnhBQ-xO_OdKvYdQmgfdNfBPR_tbySVBrmvg&s=10"
+      },
+      {
+        "Menu_Name": "ข้าวน้ำตกหมูย่าง",
+        "Price_THB": 45,
+        "Allergens": ["pork"],
+        "Tags": ["isan", "rice", "pork", "spicy", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRQaNdZop73OWh4TiCTtKx0hA2F_YDnpwKXX8-DhI3y4215xqKHCYhILnI&s=10"
+      },
+      {
+        "Menu_Name": "ตำลาว",
+        "Price_THB": 40,
+        "Allergens": ["seafood"],
+        "Tags": ["isan", "salad", "spicy", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTTXTe_gTWN5OyOqsD4HVeYDQIfBnv9m5OYoFHMZHp0PYewcKL7-PZ4Eer6&s=10"
+      },
+      {
+        "Menu_Name": "ข้าวคอหมูย่างน้ำจิ้มแจ่ว",
+        "Price_THB": 45,
+        "Allergens": ["pork"],
+        "Tags": ["isan", "rice", "pork", "spicy", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://img.wongnai.com/p/1920x0/2019/05/19/2154f9129ea04142a4bcb6822d6319c4.jpg"
+      }
+    ]
+  },
+  {
+    "Store_Name": "Ran Sip Edd",
+    "Location": "โรงอาหาร C คณะวิศวกรรมศาสตร์ สจล.",
+    "Source_Url": "",
+    "Is_Active": true,
+    "Store_Picture_Source": "https://img.wongnai.com/p/1920x0/2023/06/01/4b9c31e37fd94ee38873c0412c3277a3.jpg",
+    "Menu": [
+      {
+        "Menu_Name": "ข้าวไข่ข้นลาบหมู",
+        "Price_THB": 55,
+        "Allergens": ["egg", "pork"],
+        "Tags": ["isan", "rice", "pork", "spicy", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://www.wongnai.com/recipes/ugc/f518d4e4218a4c0fb215eded5263fb68"
+      },
+      {
+        "Menu_Name": "ข้าวไข่ข้นกะเพราหนูตุ๋น",
+        "Price_THB": 60,
+        "Allergens": ["egg", "pork"],
+        "Tags": ["thai", "rice", "pork", "spicy", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://img.wongnai.com/p/400x0/2021/01/05/89c0731cebac4bae9991a061d32b1746.jpg"
+      },
+      {
+        "Menu_Name": "ยำมาม่าต้มยำไก่ทอด",
+        "Price_THB": 45,
+        "Allergens": ["wheat"],
+        "Tags": ["thai", "noodle", "fried", "chicken", "spicy", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTKYF_CPNdVeIzlbMdSIVDK850DAXZYlf6ftC88LxmfKUXfJQhprblqkKM&s=10"
+      },
+      {
+        "Menu_Name": "ข้าวไข่ข้นแกงกะหรี่ไก่ทอด",
+        "Price_THB": 55,
+        "Allergens": ["egg"],
+        "Tags": ["thai", "rice", "curry", "fried", "chicken", "hearty"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://img.wongnai.com/p/1920x0/2023/06/01/4b9c31e37fd94ee38873c0412c3277a3.jpg"
+      },
+      {
+        "Menu_Name": "ข้าวไข่ข้นแกงเขียวหวานไก่ทอด",
+        "Price_THB": 45,
+        "Allergens": ["egg"],
+        "Tags": ["thai", "rice", "curry", "fried", "chicken", "hearty"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSgAqdzqqrcEGJ2R_fuH3WXHcueyiO3gc8M2nMd1LTnRSHO-9n5GUjJJTCw&s=10"
+      }
+    ]
+  },
+  {
+    "Store_Name": "ร้านครัวนิรมลตามสั่ง",
+    "Location": "โรงอาหาร C คณะวิศวกรรมศาสตร์ สจล.",
+    "Source_Url": "",
+    "Is_Active": true,
+    "Store_Picture_Source": "https://s359.kapook.com/r/600/auto/pagebuilder/09a92003-6eb9-4d67-b0b5-5334af7bc019.jpg",
+    "Menu": [
+      {
+        "Menu_Name": "ผัดซีอิ๊วหมูชิ้น",
+        "Price_THB": 40,
+        "Allergens": ["egg", "pork"],
+        "Tags": ["thai", "noodle", "pork", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://s359.kapook.com/r/600/auto/pagebuilder/09a92003-6eb9-4d67-b0b5-5334af7bc019.jpg"
+      },
+      {
+        "Menu_Name": "ราดหน้าหมูชิ้น",
+        "Price_THB": 40,
+        "Allergens": ["pork"],
+        "Tags": ["chinese", "noodle", "pork", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQLvgQ_bXGK591Am0K5Y3p51MdcJ3l0wMV8nKWnpW-iKSi-_bm_TnHuEdQ&s=10"
+      },
+      {
+        "Menu_Name": "คะน้าปลากระป๋อง",
+        "Price_THB": 50,
+        "Allergens": ["seafood"],
+        "Tags": ["thai", "rice", "seafood", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://s359.kapook.com/pagebuilder/d7054cd8-af5f-4a34-b05c-1fdbc8f5a99e.jpg"
+      },
+      {
+        "Menu_Name": "ผัดไทยกุ้งสด",
+        "Price_THB": 50,
+        "Allergens": ["egg", "peanut", "seafood"],
+        "Tags": ["thai", "noodle", "seafood", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://www.pholfoodmafia.com/wp-content/uploads/2020/02/7%E0%B8%9C%E0%B8%B1%E0%B8%94%E0%B9%84%E0%B8%97%E0%B8%A2%E0%B8%81%E0%B8%B8%E0%B9%89%E0%B8%87%E0%B8%AA%E0%B8%94.jpg"
+      },
+      {
+        "Menu_Name": "สุกี้",
+        "Price_THB": 50,
+        "Allergens": ["egg"],
+        "Tags": ["thai", "noodle", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://aroifin.com/wp-content/uploads/2026/03/04032026-fried-seafood-sukiyaki-02.webp"
+      }
+    ]
+  },
+  {
+    "Store_Name": "ร้านก๋วยเตี๋ยวป้าแจ๊ว",
+    "Location": "โรงอาหาร C คณะวิศวกรรมศาสตร์ สจล.",
+    "Source_Url": "",
+    "Is_Active": true,
+    "Store_Picture_Source": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSkZMnNsK8ZmSxAIZiXz2YfC4gpM2z_9ExPwt8QyuW0PHVd8g1QORb7ZSQ&s=10",
+    "Menu": [
+      {
+        "Menu_Name": "ก๋วยเตี๋ยวหมูน้ำใส",
+        "Price_THB": 30,
+        "Allergens": ["pork"],
+        "Tags": ["thai", "noodle", "soup", "pork", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRi581QrIMuS409fmlV4pnIKeSqwEmS6c5qaZfxbvBoKDg2aPqNtKoAJMg&s=10"
+      },
+      {
+        "Menu_Name": "ก๋วยเตี๋ยวหมูตุ๋น",
+        "Price_THB": 40,
+        "Allergens": ["pork"],
+        "Tags": ["thai", "noodle", "soup", "pork", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSkZMnNsK8ZmSxAIZiXz2YfC4gpM2z_9ExPwt8QyuW0PHVd8g1QORb7ZSQ&s=10"
+      },
+      {
+        "Menu_Name": "ก๋วยเตี๋ยวหมูตุ๋นต้มยำ",
+        "Price_THB": 40,
+        "Allergens": ["pork"],
+        "Tags": ["thai", "noodle", "soup", "pork", "spicy", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://img.wongnai.com/p/256x256/2020/09/18/a304f32033a047e79d8fc400c9e2ecd8.jpg"
+      },
+      {
+        "Menu_Name": "ก๋วยเตี๋ยวหมูตุ๋นน้ำตก",
+        "Price_THB": 40,
+        "Allergens": ["pork"],
+        "Tags": ["thai", "noodle", "soup", "pork", "quick"],
+        "Blacklist": false,
+        "Menu_Picture_Source": "https://img.wongnai.com/p/1920x0/2018/01/28/80707697e53f41b581632cb402fde007.jpg"
+      }
+    ]
+  }
+]

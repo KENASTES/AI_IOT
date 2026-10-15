@@ -9,7 +9,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
+import { rankFilteredFoods, type FoodRankPreferences } from "@/lib/food-ranker";
 
+<<<<<<< HEAD
 type Screen = "home" | "eat" | "cook" | "memory";
 type Profile = {
   name: string; age: string; height: string; weight: string;
@@ -30,6 +32,14 @@ const scenarios: Scenario[] = [
   { id: 2, badge: "ฮีลใจ", name: "ราเมนหมูย่างไข่ต้ม", shop: "ครัวลุงหนวด · โซน B", price: 65, walk: "4 นาที", wait: "คิว 4 นาที", score: 89, reason: "เข้ากับมู้ดอยากกินร้อน ๆ และยังเหลืองบสำหรับเครื่องดื่ม", image: "/food-ramen.jpg", color: "#ffb62e" },
 ];
 
+=======
+type Profile = { name: string; allergies: string; dislikes: string; monthlyBudget: number; dailyBudget: number };
+type Scenario = { id: string; badge: string; name: string; shop: string; price: number; location: string; score: number; reason: string; image: string; tags: string[]; color: string; sourceUrl: string };
+type LiveStats = { storeCount: number; menuCount: number; memoryCount: number };
+type MemoryItem = { _id: string; menuName: string; storeName: string; price: number; image: string; savedAt: string };
+
+const demoProfile: Profile = { name: "มินท์", allergies: "ถั่วลิสง", dislikes: "ไม่กินเผ็ดมาก", monthlyBudget: 3200, dailyBudget: 95 };
+>>>>>>> b85216ac7c53428b7f4b05e516f980e84d979d3b
 const quiz = [
   { title: "มื้อนี้มีงบเท่าไหร่?", kicker: "1 · BUDGET", options: ["ไม่เกิน ฿50", "฿50–70", "ได้หมดถ้าอร่อย"] },
   { title: "มีเวลากี่นาที?", kicker: "2 · TIME", options: ["รีบมาก 10 นาที", "สบาย ๆ 20 นาที", "ไม่รีบ"] },
@@ -38,6 +48,7 @@ const quiz = [
   { title: "มื้อนี้เอาอะไรเป็นหลัก?", kicker: "5 · GOAL", options: ["อิ่มคุ้ม", "โปรตีน", "เซอร์ไพรส์ฉัน"] },
 ];
 
+<<<<<<< HEAD
 const recipes = [
   { name: "ข้าวผัดไข่คลีนตู้เย็น", time: "15 นาที", fit: "ใช้วัตถุดิบที่เลือกครบ ทำกระทะเดียว และปรับรสตามโปรไฟล์", image: "/food-friends.jpg", ingredients: ["ข้าว", "ไข่", "ผักรวม", "ซีอิ๊ว"] },
   { name: "บะหมี่ไข่ออนเซ็นซุปหอม", time: "20 นาที", fit: "เหมาะกับวันอยากกินของร้อน ใช้อุปกรณ์น้อยและคุมงบได้", image: "/food-noodles.jpg", ingredients: ["เส้น", "ไข่", "ต้นหอม", "น้ำซุป"] },
@@ -48,6 +59,28 @@ const memoryItems = [
   { name: "ก๋วยเตี๋ยวคั่วไก่", date: "30 ก.ย. · 12:32", price: 55, image: "/food-noodles.jpg" },
   { name: "ราเมนหมูย่าง", date: "28 ก.ย. · 18:05", price: 65, image: "/food-ramen.jpg" },
 ];
+=======
+function budgetFromAnswer(answer: string, fallback: number): number {
+  const range = answer.match(/฿\s*(\d+)\s*[–-]\s*฿?\s*(\d+)/u);
+  if (range) return Number(range[2]);
+  const single = answer.match(/฿\s*(\d+)/u);
+  return single ? Number(single[1]) : fallback;
+}
+async function loadLiveStats(clientId: string): Promise<LiveStats> {
+  const response = await fetch(`/api/food/stats?clientId=${encodeURIComponent(clientId)}`, { cache: "no-store" });
+  if (!response.ok) throw new Error("Could not load live statistics");
+  return response.json() as Promise<LiveStats>;
+}
+
+async function saveFoodMemory(clientId: string, menuId: string): Promise<void> {
+  const response = await fetch("/api/food/memory", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ clientId, menuId }),
+  });
+  if (!response.ok) throw new Error("บันทึก Food Memory ไม่สำเร็จ");
+}
+>>>>>>> b85216ac7c53428b7f4b05e516f980e84d979d3b
 
 function Logo({ onClick }: { onClick?: () => void }) {
   return <button onClick={onClick} className="flex items-center gap-2.5 text-left" aria-label="ไปหน้า Home">
@@ -56,6 +89,7 @@ function Logo({ onClick }: { onClick?: () => void }) {
   </button>;
 }
 
+<<<<<<< HEAD
 function Header({ screen, onNavigate, onProfile }: { screen: Screen; onNavigate: (s: Screen) => void; onProfile: () => void }) {
   const [open, setOpen] = useState(false);
   const links: { id: Screen; label: string }[] = [
@@ -101,6 +135,44 @@ function ProfileDrawer({ open, value, onClose, onSave }: { open: boolean; value:
       <button onClick={() => setDraft(demoProfile)} className="mt-4 text-sm font-bold text-black/45 underline underline-offset-4">เติมข้อมูลเดโมให้ฉัน</button>
     </aside>
   </div>;
+=======
+function Onboarding({ onDone, clientId }: { onDone: (profile: Profile) => void; clientId: string }) {
+  const [profile, setProfile] = useState<Profile>({ name: "", allergies: "", dislikes: "", monthlyBudget: 3000, dailyBudget: 100 });
+  const [stats, setStats] = useState<LiveStats | null>(null);
+  useEffect(() => { if (clientId) loadLiveStats(clientId).then(setStats).catch(() => setStats(null)); }, [clientId]);
+  const update = (key: keyof Profile, value: string | number) => setProfile((p) => ({ ...p, [key]: value }));
+  return <main className="min-h-dvh overflow-hidden bg-[#f6f4ee] text-[#17151c]">
+    <div className="pointer-events-none fixed -right-20 -top-20 size-[420px] rounded-full bg-[#ff5b4d]/15 blur-3xl" /><div className="pointer-events-none fixed -bottom-24 -left-16 size-[380px] rounded-full bg-[#d7ff52]/25 blur-3xl" />
+    <header className="mx-auto flex max-w-7xl items-center justify-between px-5 py-6 md:px-10"><Logo /><span className="rounded-full border border-black/10 bg-white/60 px-4 py-2 text-sm font-bold backdrop-blur">KMITL · DEMO</span></header>
+    <section className="mx-auto grid max-w-7xl gap-10 px-5 pb-10 pt-4 md:grid-cols-[1.05fr_.95fr] md:px-10 md:pt-10">
+      <div className="relative z-10 max-w-2xl"><span className="inline-flex items-center gap-2 rounded-full bg-[#17151c] px-4 py-2 text-sm font-bold text-white"><Sparkles className="size-4 text-[#d7ff52]" /> บอกเราอีกนิด แล้วมื้อนี้จะง่ายขึ้น</span>
+        <h1 className="mt-6 text-[clamp(3rem,7vw,6.5rem)] font-black leading-[.87] tracking-[-.07em]">มื้อนี้<br />ให้เรา <span className="text-[#ff5b4d]">Match</span></h1>
+        <p className="mt-6 max-w-xl text-lg font-medium leading-8 text-black/60">Food Match ใช้งบ ข้อจำกัด และ Food Memory เพื่อคัดมื้อที่ใช่ ไม่ต้องเลื่อนหาร้านเป็นสิบ ๆ ร้าน</p>
+        <div className="mt-8 grid gap-5 rounded-[30px] border border-black/10 bg-white/85 p-5 shadow-[0_30px_80px_rgba(35,24,16,.10)] backdrop-blur md:grid-cols-2 md:p-7">
+          <label className="md:col-span-2"><span className="mb-2 block text-sm font-black">ชื่อที่อยากให้เราเรียก</span><Input value={profile.name} onChange={(e) => update("name", e.target.value)} placeholder="เช่น มินท์" className="h-13 rounded-2xl border-black/10 bg-[#f6f4ee] px-4 text-base font-semibold" /></label>
+          <label><span className="mb-2 block text-sm font-black">อาหารที่แพ้</span><Input value={profile.allergies} onChange={(e) => update("allergies", e.target.value)} placeholder="เช่น ถั่วลิสง, กุ้ง" className="h-13 rounded-2xl border-black/10 bg-[#f6f4ee] px-4 text-base" /></label>
+          <label><span className="mb-2 block text-sm font-black">สิ่งที่ไม่กิน</span><Input value={profile.dislikes} onChange={(e) => update("dislikes", e.target.value)} placeholder="เช่น ไม่เผ็ด, ไม่ผักชี" className="h-13 rounded-2xl border-black/10 bg-[#f6f4ee] px-4 text-base" /></label>
+          <div><div className="mb-3 flex items-end justify-between"><span className="text-sm font-black">งบอาหารต่อเดือน</span><b className="text-[#ff5b4d]">฿{profile.monthlyBudget.toLocaleString()}</b></div><Slider value={[profile.monthlyBudget]} min={1000} max={8000} step={100} onValueChange={([v]) => update("monthlyBudget", v)} className="py-2" /></div>
+          <div><div className="mb-3 flex items-end justify-between"><span className="text-sm font-black">งบต่อวัน</span><b className="text-[#ff5b4d]">฿{profile.dailyBudget}</b></div><Slider value={[profile.dailyBudget]} min={40} max={300} step={5} onValueChange={([v]) => update("dailyBudget", v)} className="py-2" /></div>
+          <Button disabled={!profile.name.trim()} onClick={() => onDone(profile)} className="h-14 rounded-2xl bg-[#ff5b4d] text-base font-black text-white shadow-[0_14px_30px_rgba(255,91,77,.28)] hover:bg-[#ee493c] md:col-span-2">เริ่ม Match มื้อแรก <Heart className="ml-1 size-5 fill-current" /></Button>
+          <button type="button" onClick={() => setProfile(demoProfile)} className="text-left text-sm font-bold text-black/45 underline decoration-dotted underline-offset-4 md:col-span-2">เติมข้อมูลเดโมให้ฉัน</button>
+        </div>
+      </div>
+      <div className="relative hidden min-h-[700px] md:block"><div className="absolute left-12 top-4 h-[620px] w-[390px] rotate-[7deg] overflow-hidden rounded-[46px] bg-[#17151c] p-3 shadow-[0_55px_100px_rgba(24,18,15,.25)]"><img src="/food-hero.jpg" alt="คนกำลังรับประทานเบอร์เกอร์" className="h-full w-full rounded-[36px] object-cover" /><div className="absolute inset-x-3 bottom-3 rounded-b-[36px] bg-gradient-to-t from-black via-black/70 to-transparent px-7 pb-8 pt-32 text-white"><span className="rounded-full bg-[#d7ff52] px-3 py-1 text-xs font-black text-black">เมนูจากฐานข้อมูล</span><div className="mt-3 text-3xl font-black">อิ่มคุ้ม ถูกใจงบ</div><p className="mt-1 text-white/70">{stats ? `มี ${stats.menuCount} เมนูจาก ${stats.storeCount} ร้าน` : "กำลังโหลดข้อมูลเมนู…"}</p></div></div><div className="absolute bottom-10 right-0 w-[260px] -rotate-[8deg] rounded-[28px] bg-[#d7ff52] p-6 shadow-xl"><div className="text-xs font-black tracking-[.18em]">FOOD MEMORY</div><div className="mt-3 text-5xl font-black tracking-[-.07em]">{stats?.memoryCount ?? "—"}</div><p className="mt-1 font-bold">มื้อที่บันทึกในอุปกรณ์นี้</p></div></div>
+    </section>
+  </main>;
+}
+
+function Quiz({ onDone, onBack }: { onDone: (answers: string[]) => void; onBack: () => void }) {
+  const [step, setStep] = useState(0); const [selected, setSelected] = useState<string[]>([]); const [remaining, setRemaining] = useState(5);
+  const choose = useCallback((choice: string) => { const answers = [...selected, choice]; setSelected(answers); if (step === quiz.length - 1) onDone(answers); else setStep((s) => s + 1); }, [onDone, selected, step]);
+  useEffect(() => { const timer = window.setInterval(() => setRemaining((v) => Math.max(0, v - 1)), 1000); return () => window.clearInterval(timer); }, []);
+  return <main className="grid min-h-dvh place-items-center overflow-hidden bg-[#17151c] px-5 py-8 text-white"><div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_50%_-10%,rgba(255,91,77,.28),transparent_38%)]" /><div className="relative w-full max-w-2xl">
+    <div className="mb-8 flex items-center justify-between"><button onClick={onBack} aria-label="ย้อนกลับ" className="grid size-12 place-items-center rounded-full border border-white/15 bg-white/5"><ArrowLeft /></button><Logo dark /><div className="grid size-12 place-items-center rounded-full bg-[#d7ff52] text-lg font-black text-black">{remaining}</div></div>
+    <div className="mb-9 flex gap-2">{quiz.map((_, i) => <span key={i} className={`h-2 flex-1 rounded-full transition-colors ${i <= step ? "bg-[#ff5b4d]" : "bg-white/12"}`} />)}</div>
+    <div className="rounded-[36px] border border-white/10 bg-white/[.06] p-6 shadow-2xl backdrop-blur md:p-10"><div className="text-sm font-black tracking-[.18em] text-[#d7ff52]">{quiz[step].kicker}</div><h1 className="mt-3 text-4xl font-black leading-tight tracking-[-.04em] md:text-6xl">{quiz[step].title}</h1><div className="mt-9 grid gap-3">{quiz[step].options.map((option, i) => <button key={option} onClick={() => choose(option)} className="group flex min-h-16 items-center justify-between rounded-2xl border border-white/10 bg-white/[.05] px-5 text-left text-lg font-black transition hover:-translate-y-0.5 hover:border-[#ff5b4d] hover:bg-[#ff5b4d] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d7ff52]"><span>{option}</span><span className="grid size-8 place-items-center rounded-full bg-white/10 text-sm group-hover:bg-black/15">{i + 1}</span></button>)}</div><div className="mt-8 flex items-center justify-between text-sm font-bold text-white/45"><span>เลือกไปแล้ว {selected.length} ข้อ</span><span>เร็วแค่ 5 วินาที</span></div></div>
+  </div></main>;
+>>>>>>> b85216ac7c53428b7f4b05e516f980e84d979d3b
 }
 
 function Field({ label, value, onChange, placeholder, wide, type = "text" }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; wide?: boolean; type?: string }) {
@@ -133,6 +205,7 @@ function EatPage({ profile, needProfile, addMeal }: { profile: Profile; needProf
   return <section className="mx-auto grid max-w-7xl gap-10 px-5 py-12 lg:grid-cols-[.9fr_1.1fr] lg:items-center lg:px-10 lg:py-20"><div><span className="inline-flex items-center gap-2 rounded-full bg-[#ff5b4d]/10 px-4 py-2 text-sm font-black text-[#ff5b4d]"><Zap className="size-4 fill-current" /> SWIPE 5 วินาที</span><h1 className="mt-6 text-5xl font-black leading-[.9] tracking-[-.06em] md:text-8xl">ออกไปกิน<br /><span className="text-[#ff5b4d]">อะไรดี?</span></h1><p className="mt-6 max-w-xl text-lg font-semibold leading-8 text-black/55">ตอบแค่เรื่องมื้อนี้: งบ เวลา ความหิว และมู้ด ส่วนข้อมูลสุขภาพและอาหารที่ไม่กิน เราดึงจาก Dashboard ให้อัตโนมัติ</p><Button onClick={start} className="mt-8 h-14 rounded-full bg-[#17151c] px-8 text-base font-black text-white hover:bg-black">เริ่มหา Food Match <ArrowRight className="ml-2" /></Button></div><div className="relative min-h-[560px]"><div className="absolute right-6 top-0 h-[500px] w-[76%] rotate-3 overflow-hidden rounded-[42px] bg-[#17151c] p-3 shadow-2xl"><img src="/food-ramen.jpg" alt="ราเมน" className="h-full w-full rounded-[32px] object-cover" /></div><div className="absolute bottom-0 left-0 w-[260px] -rotate-6 rounded-[28px] bg-[#d7ff52] p-6 shadow-xl"><b className="text-5xl tracking-[-.06em]">94%</b><span className="mt-1 block font-black">เหมาะกับมื้อนี้</span><p className="mt-3 text-sm font-bold text-black/50">฿65 · เดิน 4 นาที</p></div></div></section>;
 }
 
+<<<<<<< HEAD
 function SwipeDeck({ onPicked }: { onPicked: (s: Scenario) => void }) {
   const [index, setIndex] = useState(0); const [dragX, setDragX] = useState(0); const [dragging, setDragging] = useState(false); const startX = useRef(0); const card = scenarios[index % scenarios.length]; const next = scenarios[(index + 1) % scenarios.length];
   const choose = (liked: boolean) => { if (liked) onPicked(card); setIndex((v) => v + 1); setDragX(0); };
@@ -161,4 +234,93 @@ export default function Home() {
   const saveProfile = (next: Profile) => { setProfile(next); localStorage.setItem("food-match-profile-v2", JSON.stringify(next)); setProfileOpen(false); setToast("บันทึกโปรไฟล์แล้ว · ระบบจะจำไว้ครั้งต่อไป"); };
   const addMeal = (meal: Scenario) => { setToast(`บันทึก ${meal.name} และหักงบ ฿${meal.price} แล้ว`); navigate("memory"); };
   return <main className="min-h-dvh bg-[#f6f4ee] text-[#17151c]"><Header screen={screen} onNavigate={navigate} onProfile={() => setProfileOpen(true)} />{screen === "home" && <HomePage go={navigate} profile={profile} />}{screen === "eat" && <EatPage profile={profile} needProfile={() => setProfileOpen(true)} addMeal={addMeal} />}{screen === "cook" && <CookPage profile={profile} needProfile={() => setProfileOpen(true)} />}{screen === "memory" && <MemoryPage profile={profile} />}<footer className="border-t border-black/[.06] px-5 py-8 md:px-10"><div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4"><Logo onClick={() => navigate("home")} /><p className="text-sm font-semibold text-black/40">Demo · โรงอาหารคณะวิศวกรรมศาสตร์ ลาดกระบัง</p><button onClick={() => setProfileOpen(true)} className="rounded-full bg-white px-4 py-2 text-sm font-black">{greeting}</button></div></footer><ProfileDrawer open={profileOpen} value={profile} onClose={() => setProfileOpen(false)} onSave={saveProfile} />{toast && <div className="fixed left-1/2 top-24 z-[60] flex -translate-x-1/2 items-center gap-2 rounded-full bg-[#17151c] px-5 py-3 text-sm font-black text-white shadow-xl"><Check className="size-5 text-[#d7ff52]" />{toast}</div>}</main>;
+=======
+function SwipeDeck({ items, onPicked, onNextBatch }: { items: Scenario[]; onPicked: (s: Scenario) => void; onNextBatch: () => void }) {
+  const [index, setIndex] = useState(0); const [dragX, setDragX] = useState(0); const [dragging, setDragging] = useState(false); const startX = useRef(0); const [match, setMatch] = useState<Scenario | null>(null);
+  useEffect(() => { setIndex(0); }, [items]);
+  if (items.length === 0) return <div className="mx-auto w-full max-w-[440px] rounded-[32px] bg-white p-8 text-center shadow-lg"><Sparkles className="mx-auto size-10 text-[#ff5b4d]"/><h2 className="mt-4 text-2xl font-black">ยังไม่มีเมนูที่ตรงเงื่อนไข</h2><p className="mt-2 font-semibold text-black/55">{"เช็กการเชื่อมต่อ MongoDB หรือปรับงบและคำตอบแล้วลองใหม่"}</p></div>;
+  const card = items[index % items.length]; const nextCard = items[(index + 1) % items.length];
+  const dismiss = (liked: boolean) => { if (liked) setMatch(card); else setIndex((i) => i + 1); setDragX(0); };
+  return <div className="relative mx-auto w-full max-w-[440px]"><div className="absolute inset-x-5 top-5 h-[620px] rotate-3 overflow-hidden rounded-[38px] bg-white/60 opacity-60"><img src={nextCard.image} alt="" className="h-full w-full object-cover opacity-35" /></div><article onPointerDown={(e) => { startX.current = e.clientX; setDragging(true); e.currentTarget.setPointerCapture(e.pointerId); }} onPointerMove={(e) => dragging && setDragX(e.clientX - startX.current)} onPointerUp={() => { setDragging(false); if (Math.abs(dragX) > 105) dismiss(dragX > 0); else setDragX(0); }} className={`relative h-[620px] touch-none overflow-hidden rounded-[38px] bg-[#17151c] shadow-[0_40px_90px_rgba(22,18,17,.22)] ${dragging ? "cursor-grabbing" : "cursor-grab"}`} style={{ transform: `translateX(${dragX}px) rotate(${dragX / 22}deg)`, transition: dragging ? "none" : "transform .35s cubic-bezier(.2,.9,.2,1)" }}><img src={card.image} alt={card.name} className="h-full w-full select-none object-cover" draggable={false} /><div className="absolute inset-0 bg-gradient-to-t from-[#17151c] via-black/20 to-black/5" /><div className={`absolute left-6 top-7 rotate-[-8deg] rounded-xl border-4 px-4 py-2 text-2xl font-black uppercase ${dragX > 0 ? "opacity-100" : "opacity-0"}`} style={{ color: "#d7ff52", borderColor: "#d7ff52" }}>MATCH</div><div className={`absolute right-6 top-7 rotate-[8deg] rounded-xl border-4 border-white px-4 py-2 text-2xl font-black text-white ${dragX < 0 ? "opacity-100" : "opacity-0"}`}>PASS</div><div className="absolute inset-x-0 bottom-0 p-6 text-white md:p-7"><div className="flex items-center justify-between"><span className="rounded-full px-3 py-1.5 text-sm font-black text-black" style={{ backgroundColor: card.color }}>{card.score}% MATCH</span><span className="rounded-full bg-white/15 px-3 py-1.5 text-sm font-bold backdrop-blur">{card.badge}</span></div><h2 className="mt-4 text-3xl font-black leading-[1.05] tracking-[-.04em]">{card.name}</h2><p className="mt-2 flex items-center gap-1.5 font-bold text-white/80"><MapPin className="size-4" />{card.shop} · {card.location}</p><div className="mt-4 flex flex-wrap gap-2">{card.tags.map((tag) => <span key={tag} className="rounded-full border border-white/20 bg-black/20 px-3 py-1 text-sm font-bold backdrop-blur">{tag}</span>)}</div><p className="mt-4 text-sm font-semibold leading-6 text-white/65">{card.reason}</p><div className="mt-5 grid grid-cols-2 gap-2 border-t border-white/15 pt-5 text-center"><div><b className="block text-xl">฿{card.price}</b><span className="text-xs text-white/55">ราคาจากฐานข้อมูล</span></div><div className="flex items-center justify-center">{card.sourceUrl ? <a href={card.sourceUrl} target="_blank" rel="noreferrer" className="text-sm font-bold underline">ดูแหล่งข้อมูลร้าน</a> : <span className="text-sm font-semibold text-white/55">{card.location}</span>}</div></div></div></article><div className="relative mt-7 flex items-center justify-center gap-4"><button onClick={() => setIndex((i) => Math.max(0, i - 1))} aria-label="ย้อนการปัด" className="grid size-12 place-items-center rounded-full bg-white text-[#ffb62e] shadow-lg"><RotateCcw /></button><button onClick={() => dismiss(false)} aria-label="ไม่เลือก" className="grid size-16 place-items-center rounded-full bg-white text-[#ff5b4d] shadow-xl transition hover:scale-105"><X className="size-8" /></button><button onClick={() => dismiss(true)} aria-label="เลือกเมนูนี้" className="grid size-16 place-items-center rounded-full bg-[#d7ff52] text-[#17151c] shadow-xl transition hover:scale-105"><Heart className="size-8 fill-current" /></button><button onClick={onNextBatch} aria-label="ขอเมนูชุดใหม่" title="ขอเมนูชุดใหม่" className="grid size-12 place-items-center rounded-full bg-[#17151c] text-[#d7ff52] shadow-lg"><Zap className="fill-current" /></button></div><p className="mt-5 text-center text-sm font-bold text-black/40">ลากการ์ด หรือกดสายฟ้าเพื่อขอเมนูชุดใหม่จาก MongoDB</p>{match && <MatchModal scenario={match} onClose={() => { setMatch(null); setIndex((i) => i + 1); }} onConfirm={() => { onPicked(match); setMatch(null); }} />}</div>;
+}
+
+function Memory({ clientId }: { clientId: string }) {
+  const [items, setItems] = useState<MemoryItem[]>([]);
+  const [count, setCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    if (!clientId) return;
+    fetch(`/api/food/memory?clientId=${encodeURIComponent(clientId)}`, { cache: "no-store" })
+      .then(async (response) => { if (!response.ok) throw new Error("โหลด Food Memory ไม่สำเร็จ"); return response.json() as Promise<{items: MemoryItem[]; count: number}>; })
+      .then((result) => { setItems(result.items); setCount(result.count); })
+      .catch(() => { setItems([]); setCount(0); })
+      .finally(() => setLoading(false));
+  }, [clientId]);
+  return <section className="mx-auto w-full max-w-5xl px-5 pb-32 pt-8 md:px-10"><div className="flex items-end justify-between gap-4"><div><div className="text-sm font-black tracking-[.18em] text-[#ff5b4d]">FOOD MEMORY</div><h1 className="mt-2 text-4xl font-black tracking-[-.05em] md:text-6xl">ยิ่งกิน ยิ่งรู้ใจ</h1><p className="mt-2 font-semibold text-black/45">บันทึกแล้ว {count} มื้อ · แสดงล่าสุดไม่เกิน 30 รายการ</p></div><BookHeart className="size-12 text-[#ff5b4d]" /></div>
+    {loading ? <p className="mt-8 rounded-3xl bg-white p-8 text-center font-semibold text-black/50">กำลังโหลดประวัติมื้ออาหาร…</p> : items.length ? <div className="mt-8 grid gap-4 md:grid-cols-3">{items.map((item, i) => <article key={item._id} className="group overflow-hidden rounded-[28px] bg-white p-3 shadow-[0_20px_50px_rgba(30,24,20,.08)]"><div className="relative h-52 overflow-hidden rounded-[20px]"><img src={item.image || "/food-noodles.jpg"} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-105"/><span className="absolute right-3 top-3 rounded-full bg-white px-3 py-1 text-sm font-black">{i === 0 ? "ล่าสุด" : "บันทึกแล้ว"}</span></div><div className="p-3"><h2 className="text-xl font-black">{item.menuName}</h2><p className="mt-1 text-sm font-semibold text-black/45">{item.storeName} · {new Date(item.savedAt).toLocaleString("th-TH")}</p><div className="mt-4 flex items-center justify-between"><b>฿{item.price}</b><Heart className="size-5 fill-[#ff5b4d] text-[#ff5b4d]" /></div></div></article>)}</div> : <p className="mt-8 rounded-3xl bg-white p-8 text-center font-semibold text-black/50">ยังไม่มีมื้อที่บันทึก เลือกเมนูที่ชอบจากหน้า Match แล้วกด “เลือกมื้อนี้” เพื่อเพิ่มลง Food Memory</p>}
+    <div className="mt-6 rounded-[28px] bg-[#17151c] p-6 text-white"><div className="flex items-center gap-2 text-[#d7ff52]"><Sparkles className="size-5"/><b>FOOD MEMORY</b></div><p className="mt-2 max-w-2xl text-lg font-bold">รายการนี้บันทึกจากเมนูที่คุณเลือกในอุปกรณ์และโปรไฟล์เบราว์เซอร์นี้</p></div></section>;
+}
+
+function Budget({ profile }: { profile: Profile }) { const spent = 1340; const left = Math.max(profile.monthlyBudget - spent, 0); const pct = Math.min(100, Math.round((spent / profile.monthlyBudget) * 100)); return <section className="mx-auto w-full max-w-5xl px-5 pb-32 pt-8 md:px-10"><div className="text-sm font-black tracking-[.18em] text-[#ff5b4d]">SMART BUDGET</div><h1 className="mt-2 text-4xl font-black tracking-[-.05em] md:text-6xl">เงินเหลือ ก็กินอร่อยได้</h1><div className="mt-8 grid gap-5 md:grid-cols-[1.2fr_.8fr]"><div className="rounded-[32px] bg-[#d7ff52] p-7 md:p-10"><div className="flex items-center justify-between"><span className="font-black">งบอาหารเดือนตุลาคม</span><WalletCards /></div><div className="mt-8 text-sm font-bold">คงเหลือ</div><div className="mt-1 text-6xl font-black tracking-[-.07em] md:text-8xl">฿{left.toLocaleString()}</div><div className="mt-8 h-4 overflow-hidden rounded-full bg-black/10"><div className="h-full rounded-full bg-[#17151c]" style={{ width: `${pct}%` }} /></div><div className="mt-3 flex justify-between text-sm font-black"><span>ใช้แล้ว ฿{spent.toLocaleString()}</span><span>{pct}% ของงบ</span></div></div><div className="rounded-[32px] bg-[#ff5b4d] p-7 text-white md:p-9"><Sparkles className="size-8"/><h2 className="mt-6 text-3xl font-black leading-tight">วันนี้ใช้ได้อีก<br/>฿{profile.dailyBudget}</h2><p className="mt-3 font-semibold text-white/75">เพื่อให้งบอยู่ถึงสิ้นเดือน เราจะจัดอันดับเมนูไม่เกิน ฿{profile.dailyBudget} ให้ก่อน</p><div className="mt-8 rounded-2xl bg-white/15 p-4"><div className="text-sm font-bold text-white/65">มื้อล่าสุด</div><div className="mt-1 flex items-center justify-between font-black"><span>กะเพราไก่ไข่ดาว</span><span>−฿50</span></div></div></div></div><div className="mt-5 grid gap-4 md:grid-cols-3">{[{icon: Clock3,title:"เหลือ 29 วัน",text:"เฉลี่ยได้วันละ ฿64"},{icon: Beef,title:"9 มื้อเดือนนี้",text:"เฉลี่ยมื้อละ ฿52"},{icon: BadgeCheck,title:"อยู่ในแผน",text:"ประหยัดกว่าเป้า ฿110"}].map(({icon:Icon,title,text})=><div key={title} className="flex items-center gap-4 rounded-2xl bg-white p-5 shadow-sm"><span className="grid size-12 place-items-center rounded-2xl bg-[#f6f4ee]"><Icon/></span><div><b className="block">{title}</b><span className="text-sm font-semibold text-black/45">{text}</span></div></div>)}</div></section>; }
+
+function AppShell({ profile, onReset, clientId }: { profile: Profile; onReset: () => void; clientId: string }) {
+  const [screen, setScreen] = useState<"quiz" | "discover" | "memory" | "budget">("quiz"); const [toast, setToast] = useState("");
+  const [rankQuery, setRankQuery] = useState(""); const [rankedScenarios, setRankedScenarios] = useState<Scenario[]>([]); const [rankStatus, setRankStatus] = useState("รอคำตอบเพื่อจัดอันดับ");
+  const [rankingRun, setRankingRun] = useState(0);
+  const [rankConstraints, setRankConstraints] = useState({ maxBudgetThb: profile.dailyBudget, allergies: profile.allergies.split(/[,，]/u).map((item) => item.trim()).filter(Boolean) });
+  const [rankPreferences, setRankPreferences] = useState<FoodRankPreferences>({ time: "", hunger: "", mood: "", goal: "" });
+  useEffect(() => { if (!toast) return; const id = window.setTimeout(() => setToast(""), 3000); return () => window.clearTimeout(id); }, [toast]);
+  useEffect(() => {
+    if (screen !== "discover" || !rankQuery) return;
+    let active = true;
+    let recentMenuIds: string[] = [];
+    try {
+      const savedIds: unknown = JSON.parse(window.localStorage.getItem("forkast-food-recent-menu-ids") || "[]");
+      if (Array.isArray(savedIds)) recentMenuIds = savedIds.filter((id): id is string => typeof id === "string").slice(0, 10);
+    } catch { /* Ignore invalid local history and continue without repeat avoidance. */ }
+    rankFilteredFoods(rankQuery, rankConstraints, rankPreferences, recentMenuIds)
+      .then(({ provider, recommendations, message, explanation }) => {
+        if (!active) return;
+        const nextRecentIds = [...recommendations.map((item) => item.id), ...recentMenuIds.filter((id) => !recommendations.some((item) => item.id === id))].slice(0, 10);
+        try { window.localStorage.setItem("forkast-food-recent-menu-ids", JSON.stringify(nextRecentIds)); } catch { /* Storage may be unavailable; selection still works. */ }
+        setRankedScenarios(recommendations.map((item) => ({
+          id: item.id,
+          badge: item.tags[0] || "แนะนำ",
+          name: item.menuName,
+          shop: item.storeName,
+          price: item.price,
+          location: item.location,
+          score: item.score,
+          reason: item.matchReasons.join(" · "),
+          image: item.image,
+          tags: item.tags,
+          color: item.tags.includes("spicy") ? "#ffb62e" : "#d7ff52",
+          sourceUrl: item.sourceUrl,
+        })));
+        setRankStatus(explanation?.message || message || `เทียบคำตอบกับงบและข้อมูลเมนูใน MongoDB (${provider})`);
+      })
+      .catch((error: unknown) => { if (active) { setRankedScenarios([]); setRankStatus(error instanceof Error ? error.message : "ค้นเมนูจากฐานข้อมูลไม่สำเร็จ"); } });
+    return () => { active = false; };
+  }, [rankQuery, rankConstraints, rankPreferences, screen, rankingRun]);
+  useEffect(() => { const context = (document as Document & { modelContext?: { registerTool?: (tool: unknown, options?: unknown) => void } }).modelContext; if (!context?.registerTool) return; const lifecycle = new AbortController(); try { context.registerTool({ name: "start_food_match", title: "เริ่ม Food Match", description: "เปิดหน้าค้นหา Food Scenario ที่เหมาะกับผู้ใช้", inputSchema: { type: "object", properties: {}, additionalProperties: false }, annotations: { readOnlyHint: false, untrustedContentHint: false }, execute: async () => { setScreen("quiz"); return { status: "started" }; } }, { signal: lifecycle.signal }); context.registerTool({ name: "select_food_scenario", title: "เลือกมื้ออาหาร", description: "เลือก Food Scenario จากรหัสเมนูที่แสดง", inputSchema: { type: "object", properties: { scenarioId: { type: "string" } }, required: ["scenarioId"], additionalProperties: false }, annotations: { readOnlyHint: false, untrustedContentHint: false }, execute: async (input: unknown) => { const id = String((input as {scenarioId?: string})?.scenarioId); const s = rankedScenarios.find((x) => x.id === id); if (!s) throw new Error("ไม่พบรหัสเมนูนี้ในผลลัพธ์ปัจจุบัน"); setToast(`เลือก ${s.name} แล้ว`); setScreen("memory"); return { status: "selected", name: s.name, price: s.price }; } }, { signal: lifecycle.signal }); } catch {} return () => lifecycle.abort(); }, [rankedScenarios]);
+  if (screen === "quiz") return <Quiz onDone={(answers) => { setRankStatus("กำลังค้นเมนูที่ผ่านงบและ allergy จากฐานข้อมูล…"); setRankQuery(answers.join("; ")); setRankPreferences({ time: answers[1] ?? "", hunger: answers[2] ?? "", mood: answers[3] ?? "", goal: answers[4] ?? "" }); setRankConstraints({ maxBudgetThb: budgetFromAnswer(answers[0], profile.dailyBudget), allergies: profile.allergies.split(/[,，]/u).map((item) => item.trim()).filter(Boolean) }); setScreen("discover"); }} onBack={onReset} />;
+  return <main className="min-h-dvh bg-[#f6f4ee] text-[#17151c]"><header className="sticky top-0 z-30 border-b border-black/5 bg-[#f6f4ee]/90 backdrop-blur-xl"><div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 md:px-10"><Logo/><div className="hidden items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-bold shadow-sm sm:flex"><Navigation className="size-4 text-[#ff5b4d]"/>โรงอาหารวิศวะ ลาดกระบัง</div><button onClick={onReset} className="grid size-11 place-items-center rounded-full bg-white shadow-sm" aria-label="แก้ไขโปรไฟล์"><UserRound className="size-5"/></button></div></header>
+    {screen === "discover" && <section className="mx-auto grid max-w-7xl gap-10 px-5 pb-32 pt-8 lg:grid-cols-[.72fr_1.28fr] lg:px-10 lg:pt-12"><div className="lg:sticky lg:top-32 lg:self-start"><div className="text-sm font-black tracking-[.18em] text-[#ff5b4d]">2 FOOD SCENARIOS</div><h1 className="mt-2 text-5xl font-black leading-[.93] tracking-[-.06em] md:text-7xl">เลือกด้วย<br/>ความรู้สึก.<br/><span className="text-[#ff5b4d]">มั่นใจด้วย AI.</span></h1><div className="mt-7 rounded-[26px] bg-white p-5 shadow-sm"><div className="flex items-center gap-3"><span className="grid size-11 place-items-center rounded-2xl bg-[#d7ff52]"><Sparkles className="size-5"/></span><div><b className="block">ทำไมถึงได้ 2 ใบนี้?</b><span className="text-sm font-semibold text-black/45">AI เลือกจากเมนูใน MongoDB</span></div></div><p className="mt-4 text-sm font-semibold leading-6 text-black/55">{rankStatus}</p></div><button onClick={() => setScreen("quiz")} className="mt-5 flex items-center gap-2 text-sm font-black text-black/45"><RotateCcw className="size-4"/>เปลี่ยนคำตอบ 5 วินาที</button></div><SwipeDeck items={rankedScenarios} onNextBatch={() => { setRankedScenarios([]); setRankStatus("กำลังค้นเมนูชุดใหม่จากฐานข้อมูล…"); setRankingRun((run) => run + 1); }} onPicked={(s) => { setScreen("budget"); void saveFoodMemory(clientId, s.id).then(() => setToast(`เลือก ${s.name} · บันทึก Food Memory แล้ว`)).catch(() => setToast(`เลือก ${s.name} แล้ว แต่บันทึก Food Memory ไม่สำเร็จ`)); }} /></section>}
+    {screen === "memory" && <Memory clientId={clientId} />}{screen === "budget" && <Budget profile={profile}/>}<nav className="fixed inset-x-0 bottom-4 z-40 mx-auto flex w-[min(92%,430px)] items-center justify-around rounded-[24px] border border-white/60 bg-[#17151c]/95 px-3 py-2 text-white shadow-[0_18px_50px_rgba(0,0,0,.25)] backdrop-blur">{[{id:"discover",icon:Flame,label:"Match"},{id:"memory",icon:History,label:"Memory"},{id:"budget",icon:WalletCards,label:"งบของฉัน"}].map(({id,icon:Icon,label})=><button key={id} onClick={()=>setScreen(id as "discover"|"memory"|"budget")} className={`flex min-w-24 flex-col items-center gap-1 rounded-2xl px-4 py-2 text-xs font-black transition ${screen===id?"bg-[#ff5b4d]":"text-white/55 hover:text-white"}`}><Icon className={`size-5 ${screen===id&&id==="discover"?"fill-current":""}`}/>{label}</button>)}</nav>{toast && <div className="fixed left-1/2 top-24 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full bg-[#17151c] px-5 py-3 text-sm font-black text-white shadow-xl"><Check className="size-5 text-[#d7ff52]"/>{toast}</div>}</main>;
+}
+
+export default function Home() {
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [clientId, setClientId] = useState("");
+  useEffect(() => {
+    let id = localStorage.getItem("food-match-client-id");
+    if (!id) { id = crypto.randomUUID(); localStorage.setItem("food-match-client-id", id); }
+    setClientId(id);
+    const savedProfile = localStorage.getItem("food-match-profile");
+    if (savedProfile) { try { setProfile(JSON.parse(savedProfile) as Profile); } catch { localStorage.removeItem("food-match-profile"); } }
+  }, []);
+  const complete = (value: Profile) => { setProfile(value); localStorage.setItem("food-match-profile", JSON.stringify(value)); };
+  const reset = () => { setProfile(null); localStorage.removeItem("food-match-profile"); };
+  return profile ? <AppShell profile={profile} onReset={reset} clientId={clientId} /> : <Onboarding onDone={complete} clientId={clientId} />;
+>>>>>>> b85216ac7c53428b7f4b05e516f980e84d979d3b
 }
