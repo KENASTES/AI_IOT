@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Food Match — AI กินไรดี",
-  description: "เลือกมื้อที่ใช่ใน 5 วินาที ด้วยงบ ความชอบ และ Food Memory",
+  title: "Food Match — กินไรดี & ทำเมนูไรกินดี",
+  description: "AI ช่วยเลือกมื้อใกล้คุณหรือคิดเมนูจากวัตถุดิบที่มี พร้อม Food Memory และ Smart Budget",
   icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
 };
 
