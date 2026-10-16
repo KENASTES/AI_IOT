@@ -38,6 +38,23 @@ test("generates two validated recipes using only submitted ingredient indexes", 
   assert.equal(result.recipes[0].steps.length, 3);
 });
 
+test("passes recent recipes and valid ratings as diversity preferences", async () => {
+  const result = await generateCookRecipes({
+    ...request,
+    previousRecipes: ["ข้าวผัดไก่ไข่", "ข้าวผัดไก่ไข่", 7],
+    recipeRatings: { "ข้าวผัดไก่ไข่": 1, "ไข่ข้นไก่ราดข้าว": 5, invalid: 8 },
+  }, {
+    apiKey: "test-key",
+    fetchImpl: async (_url, init) => {
+      const prompt = JSON.parse(init.body).contents[0].parts[0].text;
+      assert.match(prompt, /recentRecipeNamesToAvoid.*ข้าวผัดไก่ไข่/u);
+      assert.match(prompt, /previousRecipeRatings.*"rating":1/u);
+      return modelResponse(recipes);
+    },
+  });
+  assert.equal(result.recipes.length, 2);
+});
+
 test("rejects invalid time, missing ingredients, and model ingredients outside user selection", async () => {
   assert.throws(() => recipeTestHelpers.validateRequest({ ...request, time: "5 นาที" }), /เลือกเวลา/u);
   assert.throws(() => recipeTestHelpers.validateRequest({ ...request, ingredients: [] }), /วัตถุดิบ/u);

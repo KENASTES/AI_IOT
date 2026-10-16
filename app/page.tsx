@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft, ArrowRight, BadgeCheck, BookHeart, Check, ChefHat, Flame,
-  Heart, MapPin, Menu, Navigation, Plus, RotateCcw, Save, Sparkles,
+  Heart, MapPin, Menu, Navigation, Plus, RotateCcw, Save, Sparkles, Star,
   UserRound, WalletCards, X, Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -209,7 +209,9 @@ type CookRecipe = {
   steps: string[];
 };
 
-function CookPage({ profile, needProfile }: { profile: Profile; needProfile: () => void }) {
+type PendingRecipeResult = { original: string[]; normalized: string[]; recipes: CookRecipe[] };
+
+function CookPage({ profile, needProfile, clientId }: { profile: Profile; needProfile: () => void; clientId: string }) {
   const options = ["ไข่", "ข้าว", "ไก่", "หมู", "เส้น", "ผัก", "เต้าหู้", "ชีส"];
   const [selected, setSelected] = useState<string[]>(["ไข่", "ข้าว"]);
   const [custom, setCustom] = useState("");
@@ -218,7 +220,49 @@ function CookPage({ profile, needProfile }: { profile: Profile; needProfile: () 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [activeRecipe, setActiveRecipe] = useState<CookRecipe | null>(null);
+  const [cookingRecipe, setCookingRecipe] = useState<CookRecipe | null>(null);
+  const [cookingStep, setCookingStep] = useState(0);
+  const [timerSeconds, setTimerSeconds] = useState(0);
+  const [timerRunning, setTimerRunning] = useState(false);
+  const [completedRecipe, setCompletedRecipe] = useState("");
+  const [pendingResult, setPendingResult] = useState<PendingRecipeResult | null>(null);
+  const [savedRecipes, setSavedRecipes] = useState<CookRecipe[]>([]);
+  const [recipeRatings, setRecipeRatings] = useState<Record<string, number>>({});
+  const [recentRecipeNames, setRecentRecipeNames] = useState<string[]>([]);
+  const recipeMemoryKey = `food-match-cook-recipes:${clientId || "anonymous"}`;
+  const recipeRatingKey = `food-match-cook-ratings:${clientId || "anonymous"}`;
+  const recentRecipeKey = `food-match-cook-recent:${clientId || "anonymous"}`;
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(recipeMemoryKey) || "[]");
+      if (Array.isArray(saved)) setSavedRecipes(saved.filter((recipe): recipe is CookRecipe => recipe && typeof recipe.name === "string" && Array.isArray(recipe.ingredients) && Array.isArray(recipe.steps)));
+      const ratings = JSON.parse(localStorage.getItem(recipeRatingKey) || "{}");
+      if (ratings && typeof ratings === "object" && !Array.isArray(ratings)) setRecipeRatings(ratings as Record<string, number>);
+      const recent = JSON.parse(localStorage.getItem(recentRecipeKey) || "[]");
+      if (Array.isArray(recent)) setRecentRecipeNames(recent.filter((name): name is string => typeof name === "string").slice(0, 20));
+    } catch { /* Ignore invalid browser storage and keep recipe generation available. */ }
+  }, [recipeMemoryKey, recipeRatingKey, recentRecipeKey]);
   const toggle = (item: string) => setSelected((current) => current.includes(item) ? current.filter((value) => value !== item) : [...current, item]);
+  useEffect(() => {
+    if (!timerRunning || timerSeconds <= 0) return;
+    const timeout = window.setTimeout(() => {
+      setTimerSeconds((seconds) => Math.max(0, seconds - 1));
+      if (timerSeconds === 1) setTimerRunning(false);
+    }, 1000);
+    return () => window.clearTimeout(timeout);
+  }, [timerRunning, timerSeconds]);
+
+  const startCooking = (recipe: CookRecipe) => {
+    setActiveRecipe(null);
+    setCookingRecipe(recipe);
+    setCookingStep(0);
+    setTimerSeconds(recipe.minutes * 60);
+    setTimerRunning(false);
+    setCompletedRecipe("");
+  };
+  const closeCooking = () => { setTimerRunning(false); setCookingRecipe(null); };
+  const timerLabel = `${String(Math.floor(timerSeconds / 60)).padStart(2, "0")}:${String(timerSeconds % 60).padStart(2, "0")}`;
   const formatIngredient = (value: string) => {
     const formatted = value.normalize("NFC").replace(/\s+/gu, " ").trim();
     return options.find((item) => item.toLocaleLowerCase() === formatted.toLocaleLowerCase()) ?? formatted;
@@ -244,11 +288,12 @@ function CookPage({ profile, needProfile }: { profile: Profile; needProfile: () 
     setLoading(true);
     setError("");
     setRecipes([]);
+    setPendingResult(null);
     try {
       const response = await fetch("/api/food/recipes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ingredients, time, allergies: profile.allergies, dislikes: profile.dislikes, conditions: profile.conditions }),
+        body: JSON.stringify({ ingredients, time, allergies: profile.allergies, dislikes: profile.dislikes, conditions: profile.conditions, previousRecipes: recentRecipeNames, recipeRatings }),
       });
       // The Vite proxy can return an empty/non-JSON 502 when food-api is offline.
       // Read text first so that case becomes an actionable message instead of a
@@ -268,15 +313,45 @@ function CookPage({ profile, needProfile }: { profile: Profile; needProfile: () 
           ? `บริการ AI ตอบกลับผิดพลาด (HTTP ${response.status}) กรุณาตรวจสอบ food-api แล้วลองใหม่`
           : "AI สร้างเมนูไม่สำเร็จ กรุณาลองใหม่"));
       }
-      if (Array.isArray(result.normalizedIngredients) && result.normalizedIngredients.length === ingredients.length) {
-        setSelected(uniqueIngredients(result.normalizedIngredients));
+      const normalized = Array.isArray(result.normalizedIngredients) && result.normalizedIngredients.length === ingredients.length
+        ? result.normalizedIngredients.map(formatIngredient)
+        : ingredients;
+      const hasCorrections = normalized.some((item, index) => item !== ingredients[index]);
+      if (hasCorrections) setPendingResult({ original: ingredients, normalized, recipes: result.recipes });
+      else {
+        setSelected(normalized);
+        setRecipes(result.recipes);
+        rememberRecipes(result.recipes);
       }
-      setRecipes(result.recipes);
     } catch (cause) {
       setError(cause instanceof TypeError
         ? "เชื่อมต่อ food-api ไม่ได้ กรุณาเปิดบริการ food-api แล้วลองอีกครั้ง"
         : cause instanceof Error ? cause.message : "เชื่อมต่อ AI ไม่สำเร็จ กรุณาลองใหม่");
     } finally { setLoading(false); }
+  };
+
+  const rememberRecipes = (nextRecipes: CookRecipe[]) => {
+    const names = [...new Set([...nextRecipes.map((recipe) => recipe.name), ...recentRecipeNames])].slice(0, 20);
+    setRecentRecipeNames(names);
+    try { localStorage.setItem(recentRecipeKey, JSON.stringify(names)); } catch { /* Recent menu diversity is optional when storage is unavailable. */ }
+  };
+  const confirmCorrections = () => {
+    if (!pendingResult) return;
+    setSelected(uniqueIngredients(pendingResult.normalized));
+    setRecipes(pendingResult.recipes);
+    rememberRecipes(pendingResult.recipes);
+    setPendingResult(null);
+  };
+  const toggleSavedRecipe = (recipe: CookRecipe) => {
+    const exists = savedRecipes.some((item) => item.name.toLocaleLowerCase() === recipe.name.toLocaleLowerCase());
+    const next = exists ? savedRecipes.filter((item) => item.name.toLocaleLowerCase() !== recipe.name.toLocaleLowerCase()) : [recipe, ...savedRecipes];
+    setSavedRecipes(next);
+    try { localStorage.setItem(recipeMemoryKey, JSON.stringify(next)); } catch { setError("บันทึกสูตรในอุปกรณ์นี้ไม่สำเร็จ"); }
+  };
+  const rateRecipe = (recipe: CookRecipe, rating: number) => {
+    const next = { ...recipeRatings, [recipe.name]: rating };
+    setRecipeRatings(next);
+    try { localStorage.setItem(recipeRatingKey, JSON.stringify(next)); } catch { setError("บันทึกคะแนนสูตรในอุปกรณ์นี้ไม่สำเร็จ"); }
   };
 
   return (
@@ -306,8 +381,32 @@ function CookPage({ profile, needProfile }: { profile: Profile; needProfile: () 
           {error && <p role="alert" className="mt-4 rounded-2xl bg-red-50 p-4 text-sm font-bold text-red-700">{error}</p>}
         </div>
       </div>
-    {recipes.length > 0 && <div className="mt-12"><div className="flex items-end justify-between gap-4"><div><span className="text-sm font-black tracking-[.16em] text-[#ff5b4d]">AI RECIPE IDEAS</span><h2 className="mt-2 text-4xl font-black tracking-[-.05em] md:text-6xl">วันนี้ทำเมนูนี้ได้เลย</h2></div><button onClick={() => setRecipes([])} className="hidden items-center gap-2 text-sm font-black text-black/45 md:flex"><RotateCcw className="size-4" />เลือกใหม่</button></div><div className="mt-7 grid gap-5 md:grid-cols-2">{recipes.map((recipe, index) => <article key={`${recipe.name}-${index}`} className="overflow-hidden rounded-[32px] bg-[#17151c] text-white"><div className="relative h-64"><img src={index === 0 ? "/food-friends.jpg" : "/food-noodles.jpg"} alt="" className="h-full w-full object-cover" /><span className="absolute left-5 top-5 rounded-full bg-[#d7ff52] px-4 py-2 text-sm font-black text-black">AI · {recipe.minutes} นาที</span></div><div className="p-6"><h3 className="text-2xl font-black">{recipe.name}</h3><span className="mt-3 inline-block rounded-full bg-white/10 px-3 py-1 text-sm font-bold">ทำได้ใน {recipe.minutes} นาที</span><p className="mt-4 text-sm font-semibold leading-6 text-white/70">{recipe.summary}</p><div className="mt-5 flex flex-wrap gap-2">{[...recipe.ingredients, ...recipe.pantryIngredients].map((ingredient) => <span key={ingredient} className="rounded-full border border-white/15 px-3 py-1 text-xs font-bold">{ingredient}</span>)}</div><button type="button" onClick={() => setActiveRecipe(recipe)} className="mt-6 flex w-full items-center justify-between rounded-2xl bg-white px-5 py-4 font-black text-[#17151c]">ดูวิธีทำแบบย่อ <ArrowRight /></button></div></article>)}</div></div>}
-    {activeRecipe && <div className="fixed inset-0 z-[70] grid place-items-center bg-black/55 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setActiveRecipe(null); }}><section role="dialog" aria-modal="true" aria-labelledby="recipe-title" className="max-h-[90dvh] w-full max-w-2xl overflow-y-auto rounded-[30px] bg-[#f6f4ee] p-6 shadow-2xl md:p-8"><div className="flex items-start justify-between gap-4"><div><span className="text-xs font-black tracking-[.16em] text-[#ff5b4d]">AI-สร้างสูตร · {activeRecipe.minutes} นาที</span><h2 id="recipe-title" className="mt-2 text-3xl font-black">{activeRecipe.name}</h2><p className="mt-2 font-semibold text-black/55">{activeRecipe.summary}</p></div><button type="button" onClick={() => setActiveRecipe(null)} aria-label="ปิดวิธีทำ" className="grid size-10 shrink-0 place-items-center rounded-full bg-white"><X /></button></div><div className="mt-6 rounded-2xl bg-white p-5"><h3 className="font-black">วัตถุดิบ</h3><p className="mt-2 text-sm font-semibold leading-6 text-black/65">{[...activeRecipe.ingredients, ...activeRecipe.pantryIngredients].join(" · ")}</p><h3 className="mt-5 font-black">ขั้นตอน</h3><ol className="mt-3 space-y-3">{activeRecipe.steps.map((step, index) => <li key={`${index}-${step}`} className="flex gap-3 text-sm font-semibold leading-6"><span className="grid size-7 shrink-0 place-items-center rounded-full bg-[#d7ff52] font-black">{index + 1}</span><span>{step}</span></li>)}</ol></div><p className="mt-4 rounded-2xl bg-amber-50 p-4 text-xs font-semibold leading-5 text-amber-900">สูตรสร้างโดย AI ควรตรวจสอบวัตถุดิบกับอาการแพ้ของคุณอีกครั้ง และปรุงเนื้อสัตว์/ไข่ให้สุกทั่วถึงก่อนรับประทาน</p></section></div>}
+    {completedRecipe && <p role="status" className="mt-8 rounded-2xl bg-[#d7ff52] p-4 text-sm font-black">ทำ {completedRecipe} เสร็จแล้ว อร่อยเลยครับ!</p>}
+      {pendingResult && <div role="status" className="mt-8 rounded-[28px] border border-amber-200 bg-amber-50 p-5"><h2 className="font-black">AI แนะนำให้ตรวจคำวัตถุดิบก่อน</h2><div className="mt-3 flex flex-wrap gap-2">{pendingResult.original.map((value, index) => value !== pendingResult.normalized[index] && <span key={`${value}-${index}`} className="rounded-full bg-white px-3 py-2 text-sm font-bold">{value} <ArrowRight className="mx-1 inline size-4" /> {pendingResult.normalized[index]}</span>)}</div><p className="mt-3 text-sm font-semibold text-black/60">ยืนยันเมื่อชื่อใหม่ตรงกับวัตถุดิบจริงของคุณ หากไม่ตรงให้ปิดข้อความนี้แล้วแก้รายการเองก่อนคิดเมนู</p><div className="mt-4 flex flex-wrap gap-2"><Button type="button" onClick={confirmCorrections} className="rounded-xl bg-[#17151c] font-black text-white">ยืนยันคำที่แก้และดูเมนู</Button><Button type="button" variant="outline" onClick={() => setPendingResult(null)} className="rounded-xl font-black">แก้รายการเอง</Button></div></div>}
+      {recipes.length > 0 && <div className="mt-12"><div className="flex items-end justify-between gap-4"><div><span className="text-sm font-black tracking-[.16em] text-[#ff5b4d]">AI RECIPE IDEAS</span><h2 className="mt-2 text-4xl font-black tracking-[-.05em] md:text-6xl">วันนี้ทำเมนูนี้ได้เลย</h2></div><button onClick={() => { setRecipes([]); setPendingResult(null); }} className="hidden items-center gap-2 text-sm font-black text-black/45 md:flex"><RotateCcw className="size-4" />เลือกใหม่</button></div><div className="mt-7 grid gap-5 md:grid-cols-2">{recipes.map((recipe, index) => { const isSaved = savedRecipes.some((item) => item.name.toLocaleLowerCase() === recipe.name.toLocaleLowerCase()); const rating = recipeRatings[recipe.name] || 0; return <article key={`${recipe.name}-${index}`} className="overflow-hidden rounded-[32px] bg-[#17151c] text-white"><div className="relative h-64"><img src={index === 0 ? "/food-friends.jpg" : "/food-noodles.jpg"} alt="" className="h-full w-full object-cover" /><span className="absolute left-5 top-5 rounded-full bg-[#d7ff52] px-4 py-2 text-sm font-black text-black">AI · {recipe.minutes} นาที</span></div><div className="p-6"><div className="flex items-start justify-between gap-3"><h3 className="text-2xl font-black">{recipe.name}</h3><button type="button" onClick={() => toggleSavedRecipe(recipe)} aria-label={isSaved ? "ยกเลิกบันทึกสูตร" : "บันทึกสูตร"} className="grid size-10 shrink-0 place-items-center rounded-full bg-white/10"><Heart className={`size-5 ${isSaved ? "fill-[#ff5b4d] text-[#ff5b4d]" : ""}`} /></button></div><span className="mt-3 inline-block rounded-full bg-white/10 px-3 py-1 text-sm font-bold">ทำได้ใน {recipe.minutes} นาที</span><p className="mt-4 text-sm font-semibold leading-6 text-white/70">{recipe.summary}</p><div className="mt-5"><p className="text-xs font-black uppercase tracking-wider text-[#d7ff52]">ของที่คุณเลือก · {recipe.ingredients.length}</p><div className="mt-2 flex flex-wrap gap-2">{recipe.ingredients.map((ingredient) => <span key={ingredient} className="rounded-full border border-white/20 px-3 py-1 text-xs font-bold">{ingredient}</span>)}</div>{recipe.pantryIngredients.length > 0 && <><p className="mt-4 text-xs font-black uppercase tracking-wider text-white/55">เครื่องปรุงพื้นฐานที่ต้องเพิ่ม</p><div className="mt-2 flex flex-wrap gap-2">{recipe.pantryIngredients.map((ingredient) => <span key={ingredient} className="rounded-full border border-dashed border-white/30 px-3 py-1 text-xs font-bold text-white/70">{ingredient}</span>)}</div></>}</div><div className="mt-5 flex items-center gap-1" aria-label={`ให้คะแนน ${rating} จาก 5`}><span className="mr-2 text-xs font-bold text-white/55">ถูกใจแค่ไหน?</span>{[1,2,3,4,5].map((value) => <button type="button" key={value} onClick={() => rateRecipe(recipe, value)} aria-label={`ให้ ${value} ดาว`} className="p-1"><Star className={`size-5 ${value <= rating ? "fill-[#d7ff52] text-[#d7ff52]" : "text-white/45"}`} /></button>)}</div><button type="button" onClick={() => setActiveRecipe(recipe)} className="mt-6 flex w-full items-center justify-between rounded-2xl bg-white px-5 py-4 font-black text-[#17151c]">ดูวิธีทำแบบย่อ <ArrowRight /></button></div></article>; })}</div></div>}
+      {savedRecipes.length > 0 && <div className="mt-12 rounded-[30px] bg-white p-6 md:p-8"><div className="flex items-center gap-3"><BookHeart className="size-6 text-[#ff5b4d]" /><h2 className="text-2xl font-black">สูตรที่บันทึกไว้</h2></div><div className="mt-5 grid gap-3 sm:grid-cols-2">{savedRecipes.map((recipe) => <div key={recipe.name} className="flex items-center justify-between gap-3 rounded-2xl bg-[#f6f4ee] p-4"><button type="button" onClick={() => setActiveRecipe(recipe)} className="text-left"><b>{recipe.name}</b><span className="mt-1 block text-xs font-semibold text-black/50">{recipe.minutes} นาที{recipeRatings[recipe.name] ? ` · ${recipeRatings[recipe.name]}/5 ดาว` : ""}</span></button><button type="button" onClick={() => toggleSavedRecipe(recipe)} aria-label={`ลบ ${recipe.name} จากสูตรที่บันทึก`} className="rounded-full p-2 text-[#ff5b4d]"><X className="size-4" /></button></div>)}</div></div>}
+    {activeRecipe && (
+      <div className="fixed inset-0 z-[70] grid place-items-center bg-black/55 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setActiveRecipe(null); }}>
+        <section role="dialog" aria-modal="true" aria-labelledby="recipe-title" className="max-h-[90dvh] w-full max-w-2xl overflow-y-auto rounded-[30px] bg-[#f6f4ee] p-6 shadow-2xl md:p-8">
+          <div className="flex items-start justify-between gap-4"><div><span className="text-xs font-black tracking-[.16em] text-[#ff5b4d]">AI-สร้างสูตร · {activeRecipe.minutes} นาที</span><h2 id="recipe-title" className="mt-2 text-3xl font-black">{activeRecipe.name}</h2><p className="mt-2 font-semibold text-black/55">{activeRecipe.summary}</p></div><button type="button" onClick={() => setActiveRecipe(null)} aria-label="ปิดวิธีทำ" className="grid size-10 shrink-0 place-items-center rounded-full bg-white"><X /></button></div>
+          <div className="mt-6 rounded-2xl bg-white p-5"><h3 className="font-black">ของที่คุณเลือก · {activeRecipe.ingredients.length} อย่าง</h3><p className="mt-2 text-sm font-semibold leading-6 text-black/65">{activeRecipe.ingredients.join(" · ")}</p>{activeRecipe.pantryIngredients.length > 0 && <><h3 className="mt-5 font-black">เครื่องปรุงพื้นฐานที่ต้องเพิ่ม</h3><p className="mt-2 text-sm font-semibold leading-6 text-black/65">{activeRecipe.pantryIngredients.join(" · ")}</p></>}<h3 className="mt-5 font-black">ขั้นตอน</h3><ol className="mt-3 space-y-3">{activeRecipe.steps.map((step, index) => <li key={`${index}-${step}`} className="flex gap-3 text-sm font-semibold leading-6"><span className="grid size-7 shrink-0 place-items-center rounded-full bg-[#d7ff52] font-black">{index + 1}</span><span>{step}</span></li>)}</ol></div>
+          <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-xs font-semibold leading-5 text-amber-900">สูตรสร้างโดย AI ควรตรวจสอบวัตถุดิบกับอาการแพ้ของคุณอีกครั้ง และปรุงเนื้อสัตว์/ไข่ให้สุกทั่วถึงก่อนรับประทาน</p>
+          <Button type="button" onClick={() => startCooking(activeRecipe)} className="mt-4 h-12 w-full rounded-2xl bg-[#17151c] font-black text-white hover:bg-black"><ChefHat className="mr-2 size-5" />เริ่มโหมดทำอาหาร</Button>
+        </section>
+      </div>
+    )}
+    {cookingRecipe && (
+      <div className="fixed inset-0 z-[80] grid place-items-center bg-[#17151c]/75 p-4 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget) closeCooking(); }}>
+        <section role="dialog" aria-modal="true" aria-labelledby="cook-mode-title" className="w-full max-w-2xl overflow-hidden rounded-[32px] bg-[#f6f4ee] shadow-2xl">
+          <header className="flex items-start justify-between gap-4 bg-white p-6 md:p-8"><div><span className="text-xs font-black tracking-[.18em] text-[#ff5b4d]">COOK MODE · {cookingRecipe.minutes} นาที</span><h2 id="cook-mode-title" className="mt-2 text-2xl font-black md:text-3xl">{cookingRecipe.name}</h2></div><button type="button" onClick={closeCooking} aria-label="ปิดโหมดทำอาหาร" className="grid size-10 shrink-0 place-items-center rounded-full bg-[#f6f4ee]"><X /></button></header>
+          <div className="px-6 pt-6 md:px-8"><div className="flex items-center justify-between text-sm font-black"><span>ขั้นตอน {cookingStep + 1} จาก {cookingRecipe.steps.length}</span><span>{Math.round(((cookingStep + 1) / cookingRecipe.steps.length) * 100)}%</span></div><div className="mt-3 h-2 overflow-hidden rounded-full bg-black/10"><div className="h-full rounded-full bg-[#d7ff52] transition-all duration-300" style={{ width: `${((cookingStep + 1) / cookingRecipe.steps.length) * 100}%` }} /></div></div>
+          <div className="p-6 md:p-8"><div aria-live="polite" className="min-h-52 rounded-[28px] bg-[#17151c] p-6 text-white md:p-8"><span className="text-sm font-black tracking-[.16em] text-[#d7ff52]">ขั้นตอนที่ {cookingStep + 1}</span><p className="mt-5 text-2xl font-black leading-relaxed md:text-3xl">{cookingRecipe.steps[cookingStep]}</p></div>
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-white p-5"><div><span className="text-xs font-black tracking-[.12em] text-black/45">เวลาที่แนะนำ · นับถอยหลัง</span><div className="mt-1 font-mono text-4xl font-black tabular-nums">{timerLabel}</div>{timerSeconds === 0 && <p className="mt-1 text-xs font-bold text-[#ff5b4d]">ครบเวลาที่แนะนำแล้ว เช็กความสุกก่อนเสิร์ฟนะครับ</p>}</div><div className="flex flex-wrap gap-2"><Button type="button" onClick={() => setTimerRunning((running) => !running)} disabled={timerSeconds === 0} className="rounded-xl bg-[#ff5b4d] font-black text-white hover:bg-[#e94d40]">{timerRunning ? "พักเวลา" : "เริ่มจับเวลา"}</Button><Button type="button" variant="outline" onClick={() => { setTimerRunning(false); setTimerSeconds((seconds) => seconds + 60); }} className="rounded-xl font-black">+1 นาที</Button><Button type="button" variant="outline" onClick={() => { setTimerRunning(false); setTimerSeconds(cookingRecipe.minutes * 60); }} aria-label="เริ่มจับเวลาใหม่" className="rounded-xl"><RotateCcw className="size-4" /></Button></div></div>
+            <div className="mt-5 flex gap-3"><Button type="button" variant="outline" disabled={cookingStep === 0} onClick={() => setCookingStep((step) => Math.max(0, step - 1))} className="h-12 flex-1 rounded-2xl font-black">ย้อนกลับ</Button>{cookingStep < cookingRecipe.steps.length - 1 ? <Button type="button" onClick={() => setCookingStep((step) => Math.min(cookingRecipe.steps.length - 1, step + 1))} className="h-12 flex-1 rounded-2xl bg-[#17151c] font-black text-white hover:bg-black">เสร็จแล้ว · ขั้นต่อไป <ArrowRight className="ml-2 size-4" /></Button> : <Button type="button" onClick={() => { setCompletedRecipe(cookingRecipe.name); closeCooking(); }} className="h-12 flex-1 rounded-2xl bg-[#d7ff52] font-black text-[#17151c] hover:bg-[#c6ef45]"><Check className="mr-2 size-4" />ทำเสร็จแล้ว</Button>}</div>
+          </div>
+        </section>
+      </div>
+    )}
     </section>
   );
 }
@@ -400,7 +499,7 @@ export default function Home() {
   const navigate = (next: Screen) => { setScreen(next); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const saveProfile = (next: Profile) => { setProfile(next); localStorage.setItem("food-match-profile-v2", JSON.stringify(next)); setProfileOpen(false); setToast("บันทึกโปรไฟล์แล้ว · ระบบจะจำไว้ครั้งต่อไป"); };
   const addMeal = (meal: Scenario) => { void saveFoodMemory(clientId, meal.id).then(() => setToast(`บันทึก ${meal.name} ลง Food Memory แล้ว`)).catch(() => setToast(`เลือก ${meal.name} แล้ว แต่บันทึก Food Memory ไม่สำเร็จ`)); navigate("memory"); };
-  return <main className="min-h-dvh bg-[#f6f4ee] text-[#17151c]"><Header screen={screen} onNavigate={navigate} onProfile={() => setProfileOpen(true)} />{screen === "home" && <HomePage go={navigate} profile={profile} clientId={clientId} />}{screen === "eat" && <EatPage profile={profile} needProfile={() => setProfileOpen(true)} clientId={clientId} addMeal={addMeal} />}{screen === "cook" && <CookPage profile={profile} needProfile={() => setProfileOpen(true)} />}{screen === "memory" && <MemoryPage profile={profile} clientId={clientId} />}<footer className="border-t border-black/[.06] px-5 py-8 md:px-10"><div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4"><Logo onClick={() => navigate("home")} /><p className="text-sm font-semibold text-black/40">Demo · โรงอาหารคณะวิศวกรรมศาสตร์ ลาดกระบัง</p><button onClick={() => setProfileOpen(true)} className="rounded-full bg-white px-4 py-2 text-sm font-black">{greeting}</button></div></footer><ProfileDrawer open={profileOpen} value={profile} onClose={() => setProfileOpen(false)} onSave={saveProfile} />{toast && <div className="fixed left-1/2 top-24 z-[60] flex -translate-x-1/2 items-center gap-2 rounded-full bg-[#17151c] px-5 py-3 text-sm font-black text-white shadow-xl"><Check className="size-5 text-[#d7ff52]" />{toast}</div>}</main>;
+  return <main className="min-h-dvh bg-[#f6f4ee] text-[#17151c]"><Header screen={screen} onNavigate={navigate} onProfile={() => setProfileOpen(true)} />{screen === "home" && <HomePage go={navigate} profile={profile} clientId={clientId} />}{screen === "eat" && <EatPage profile={profile} needProfile={() => setProfileOpen(true)} clientId={clientId} addMeal={addMeal} />}{screen === "cook" && <CookPage profile={profile} needProfile={() => setProfileOpen(true)} clientId={clientId} />}{screen === "memory" && <MemoryPage profile={profile} clientId={clientId} />}<footer className="border-t border-black/[.06] px-5 py-8 md:px-10"><div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4"><Logo onClick={() => navigate("home")} /><p className="text-sm font-semibold text-black/40">Demo · โรงอาหารคณะวิศวกรรมศาสตร์ ลาดกระบัง</p><button onClick={() => setProfileOpen(true)} className="rounded-full bg-white px-4 py-2 text-sm font-black">{greeting}</button></div></footer><ProfileDrawer open={profileOpen} value={profile} onClose={() => setProfileOpen(false)} onSave={saveProfile} />{toast && <div className="fixed left-1/2 top-24 z-[60] flex -translate-x-1/2 items-center gap-2 rounded-full bg-[#17151c] px-5 py-3 text-sm font-black text-white shadow-xl"><Check className="size-5 text-[#d7ff52]" />{toast}</div>}</main>;
 }
 /*
 function SwipeDeck({ items, onPicked, onNextBatch }: { items: Scenario[]; onPicked: (s: Scenario) => void; onNextBatch: () => void }) {
