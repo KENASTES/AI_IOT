@@ -93,7 +93,7 @@ export function scoreCandidates(candidates, preferences, maxBudgetThb) {
 
   const evaluatedCriteria = [...new Set(criteria.map((criterion) => criterion.label))];
   const message = [
-    `คะแนนเทียบจาก ${evaluatedCriteria.join(" + ")} ใน MongoDB (งบและอาหารที่แพ้เป็นตัวกรองบังคับ)`,
+    `คะแนนเทียบจาก ${evaluatedCriteria.join(" + ")} ตามข้อมูลร้านและเมนู (งบและอาหารที่แพ้เป็นตัวกรองบังคับ)`,
     unsupported.length ? `ยังไม่รวมเกณฑ์ที่ฐานข้อมูลไม่มีข้อมูล: ${unsupported.join(", ")}` : "",
   ].filter(Boolean).join(" · ");
 

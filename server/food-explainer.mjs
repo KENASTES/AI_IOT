@@ -74,7 +74,7 @@ function fallback(recommendations, preferences, budget, recentIds = [], random =
   }
   return {
     provider: "database",
-    message: "คัดจาก MongoDB โดยกรองงบและอาหารที่แพ้ก่อน แล้วจัดอันดับตามราคาและแท็กที่ตรงกับคำตอบเท่าที่ร้านมีข้อมูล พร้อมเลี่ยงเมนูล่าสุดและเลือกร้านต่างกันเมื่อมีตัวเลือก",
+    message: "คัดจากข้อมูลร้านและเมนู โดยกรองงบและอาหารที่แพ้ก่อน แล้วจัดอันดับตามราคาและแท็กที่ตรงกับคำตอบเท่าที่ร้านมีข้อมูล พร้อมเลี่ยงเมนูล่าสุดและเลือกร้านต่างกันเมื่อมีตัวเลือก",
     recommendations: chosen.map((candidate) => ({
       ...candidate,
       matchReasons: safeReasons(candidate, preferences, budget),

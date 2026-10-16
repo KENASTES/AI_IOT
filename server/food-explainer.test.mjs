@@ -37,7 +37,7 @@ test("missing API key falls back to safe, grounded reasons", async () => {
   const result = await explainRecommendations(recommendations, preferences, 60, [], { apiKey: "", random: () => 0 });
 
   assert.equal(result.provider, "database");
-  assert.match(result.message, /คัดจาก MongoDB/u);
+  assert.match(result.message, /คัดจากข้อมูลร้านและเมนู/u);
   assert.match(result.message, /กรองงบและอาหารที่แพ้ก่อน/u);
   assert.doesNotMatch(result.message, /AI ยังไม่พร้อม|สุ่มเมนู/u);
   const fallbackReasons = result.recommendations.flatMap((item) => item.matchReasons).join(" ");
