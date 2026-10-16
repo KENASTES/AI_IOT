@@ -54,7 +54,14 @@ function recipeSchema(ingredientIndexes) {
             name: { type: "string" },
             summary: { type: "string" },
             minutes: { type: "integer" },
-            usedIngredientIndexes: { type: "array", items: { type: "integer", enum: ingredientIndexes }, minItems: 1 },
+            // Gemini's responseSchema treats enum values as strings even for
+            // integer items. Bound the indexes numerically; parseRecipes still
+            // validates each returned index against the submitted ingredients.
+            usedIngredientIndexes: {
+              type: "array",
+              items: { type: "integer", minimum: 0, maximum: ingredientIndexes.length - 1 },
+              minItems: 1,
+            },
             pantryIngredients: { type: "array", items: { type: "string", enum: [...PANTRY_STAPLES] } },
             steps: { type: "array", minItems: 3, maxItems: 8, items: { type: "string" } },
           },

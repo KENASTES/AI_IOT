@@ -26,6 +26,8 @@ test("generates two validated recipes using only submitted ingredient indexes", 
       const body = JSON.parse(init.body);
       assert.equal(body.generationConfig.responseMimeType, "application/json");
       assert.deepEqual(body.generationConfig.responseSchema.properties.recipes.minItems, 2);
+      const indexSchema = body.generationConfig.responseSchema.properties.recipes.items.properties.usedIngredientIndexes.items;
+      assert.deepEqual(indexSchema, { type: "integer", minimum: 0, maximum: 2 });
       return modelResponse(recipes);
     },
   });
