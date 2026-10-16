@@ -74,7 +74,7 @@ function fallback(recommendations, preferences, budget, recentIds = [], random =
   }
   return {
     provider: "database",
-    message: "AI ยังไม่พร้อม จึงสุ่มเมนูคะแนนใกล้เคียงจากฐานข้อมูล เลี่ยงเมนูที่เพิ่งแสดง และพยายามเลือกร้านต่างกัน",
+    message: "คัดจาก MongoDB โดยกรองงบและอาหารที่แพ้ก่อน แล้วจัดอันดับตามราคาและแท็กที่ตรงกับคำตอบเท่าที่ร้านมีข้อมูล พร้อมเลี่ยงเมนูล่าสุดและเลือกร้านต่างกันเมื่อมีตัวเลือก",
     recommendations: chosen.map((candidate) => ({
       ...candidate,
       matchReasons: safeReasons(candidate, preferences, budget),
@@ -116,6 +116,29 @@ function finalizeSelection(pool, selectedIds, recentIds) {
     selected.push(candidate);
   }
   return selected;
+}
+
+function getFinalResponseText(candidate) {
+  const parts = Array.isArray(candidate?.content?.parts) ? candidate.content.parts : [];
+  return parts
+    .filter((part) => typeof part?.text === "string" && part.thought !== true)
+    .map((part) => part.text.trim())
+    .filter(Boolean)
+    .join("\n");
+}
+
+function parseStructuredJson(text) {
+  const trimmed = text.trim().replace(/^```(?:json)?\s*/iu, "").replace(/\s*```$/u, "");
+  try { return JSON.parse(trimmed); } catch {
+    // Some model versions may prepend a short sentence despite JSON mode.
+    // Only accept a complete JSON object; never trust or display the prose.
+    const start = trimmed.indexOf("{");
+    const end = trimmed.lastIndexOf("}");
+    if (start >= 0 && end > start) {
+      try { return JSON.parse(trimmed.slice(start, end + 1)); } catch { /* Fall through to the safe database fallback. */ }
+    }
+    throw new Error("Gemini returned non-JSON explanation text");
+  }
 }
 
 /** Gemini selects menu IDs and allowed reason codes; all visible copy is app-controlled. */
@@ -171,12 +194,12 @@ export async function explainRecommendations(recommendations, preferences, budge
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
-          // Gemini 2.5 Flash uses the GenerateContent responseMimeType/responseSchema
-          // fields. The newer responseFormat wrapper is for Gemini 3+ models.
-          responseMimeType: "application/json",
-          responseSchema: schema,
+          responseFormat: { text: { mimeType: "application/json", schema } },
           temperature: 0.1,
-          maxOutputTokens: 300,
+          // This is a tiny classification task. Disable 2.5 Flash thinking so
+          // the 300-token cap cannot be consumed before the final JSON arrives.
+          thinkingConfig: { thinkingBudget: 0 },
+          maxOutputTokens: 512,
         },
       }),
       signal: AbortSignal.timeout(8000),
@@ -189,9 +212,14 @@ export async function explainRecommendations(recommendations, preferences, budge
     }
 
     const body = await response.json();
-    const text = body?.candidates?.[0]?.content?.parts?.find((part) => typeof part.text === "string")?.text;
-    if (!text) throw new Error("Gemini response did not contain structured text");
-    const parsed = JSON.parse(text);
+    const candidate = body?.candidates?.[0];
+    const text = getFinalResponseText(candidate);
+    if (!text) {
+      const finishReason = candidate?.finishReason || "unknown";
+      const blockReason = body?.promptFeedback?.blockReason || "none";
+      throw new Error(`Gemini returned no final text (finishReason=${finishReason}, blockReason=${blockReason})`);
+    }
+    const parsed = parseStructuredJson(text);
     if (!Array.isArray(parsed.items)) throw new Error("Gemini explanation schema is invalid");
 
     const selectedIds = parsed.items
