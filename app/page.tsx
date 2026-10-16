@@ -219,11 +219,28 @@ function CookPage({ profile, needProfile }: { profile: Profile; needProfile: () 
   const [error, setError] = useState("");
   const [activeRecipe, setActiveRecipe] = useState<CookRecipe | null>(null);
   const toggle = (item: string) => setSelected((current) => current.includes(item) ? current.filter((value) => value !== item) : [...current, item]);
+  const formatIngredient = (value: string) => {
+    const formatted = value.normalize("NFC").replace(/\s+/gu, " ").trim();
+    return options.find((item) => item.toLocaleLowerCase() === formatted.toLocaleLowerCase()) ?? formatted;
+  };
+  const uniqueIngredients = (items: string[]) => [...new Map(items.map(formatIngredient).filter(Boolean).map((item) => [item.toLocaleLowerCase(), item])).values()];
+  const addCustomIngredient = () => {
+    const ingredient = formatIngredient(custom);
+    if (!ingredient) return;
+    const alreadySelected = selected.some((item) => item.toLocaleLowerCase() === ingredient.toLocaleLowerCase());
+    if (!alreadySelected && selected.length >= 15) { setError("เพิ่มวัตถุดิบได้สูงสุด 15 อย่าง"); return; }
+    setSelected(uniqueIngredients([...selected, ingredient]));
+    setCustom("");
+    setError("");
+  };
 
   const generate = async () => {
     if (!profile.name) { needProfile(); return; }
-    const ingredients = [...new Set([...selected, custom.trim()].filter(Boolean))];
+    const ingredients = uniqueIngredients([...selected, custom]);
     if (!ingredients.length) { setError("เลือกหรือเพิ่มวัตถุดิบอย่างน้อย 1 อย่างก่อน"); return; }
+    if (ingredients.length > 15) { setError("เลือกวัตถุดิบได้สูงสุด 15 อย่าง"); return; }
+    setSelected(ingredients);
+    setCustom("");
     setLoading(true);
     setError("");
     setRecipes([]);
@@ -237,7 +254,7 @@ function CookPage({ profile, needProfile }: { profile: Profile; needProfile: () 
       // Read text first so that case becomes an actionable message instead of a
       // JSON parsing exception exposed directly in the UI.
       const responseText = await response.text();
-      let result: { recipes?: CookRecipe[]; error?: string } = {};
+      let result: { recipes?: CookRecipe[]; normalizedIngredients?: string[]; error?: string } = {};
       try {
         if (responseText.trim()) result = JSON.parse(responseText) as typeof result;
       } catch {
@@ -251,6 +268,9 @@ function CookPage({ profile, needProfile }: { profile: Profile; needProfile: () 
           ? `บริการ AI ตอบกลับผิดพลาด (HTTP ${response.status}) กรุณาตรวจสอบ food-api แล้วลองใหม่`
           : "AI สร้างเมนูไม่สำเร็จ กรุณาลองใหม่"));
       }
+      if (Array.isArray(result.normalizedIngredients) && result.normalizedIngredients.length === ingredients.length) {
+        setSelected(uniqueIngredients(result.normalizedIngredients));
+      }
       setRecipes(result.recipes);
     } catch (cause) {
       setError(cause instanceof TypeError
@@ -259,11 +279,37 @@ function CookPage({ profile, needProfile }: { profile: Profile; needProfile: () 
     } finally { setLoading(false); }
   };
 
-  return <section className="mx-auto max-w-7xl px-5 py-10 md:px-10 md:py-14"><div className="grid gap-9 lg:grid-cols-[.8fr_1.2fr]"><div><span className="inline-flex items-center gap-2 rounded-full bg-[#d7ff52] px-4 py-2 text-sm font-black"><ChefHat className="size-4" /> COOK MATCH</span><h1 className="mt-5 text-5xl font-black leading-[.9] tracking-[-.06em] md:text-7xl">มีอะไรอยู่<br />ในครัวบ้าง?</h1><p className="mt-5 max-w-lg font-semibold leading-7 text-black/55">เลือกวัตถุดิบและเวลา แล้วให้ AI คิด 2 เมนูพร้อมขั้นตอนทำจริง</p><div className="mt-8 overflow-hidden rounded-[32px]"><img src="/food-noodles.jpg" alt="อาหารทำเอง" className="h-72 w-full object-cover" /></div></div>
-    <div className="rounded-[34px] bg-white p-6 shadow-[0_25px_70px_rgba(30,24,20,.09)] md:p-9"><label className="text-sm font-black">1. เลือกวัตถุดิบที่มี</label><div className="mt-4 flex flex-wrap gap-2">{options.map((item) => <button type="button" key={item} onClick={() => toggle(item)} className={`rounded-full border px-4 py-2 text-sm font-black transition ${selected.includes(item) ? "border-[#17151c] bg-[#17151c] text-white" : "border-black/10 bg-[#f6f4ee]"}`}>{selected.includes(item) ? <Check className="mr-1 inline size-4" /> : <Plus className="mr-1 inline size-4" />}{item}</button>)}</div><div className="mt-4 flex gap-2"><Input value={custom} onChange={(event) => setCustom(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void generate(); } }} placeholder="เพิ่มวัตถุดิบ เช่น มะเขือเทศ" className="h-12 rounded-2xl border-black/10 bg-[#f6f4ee]" /><button type="button" onClick={() => { if (custom.trim()) { setSelected((current) => [...new Set([...current, custom.trim()])]); setCustom(""); } }} aria-label="เพิ่มวัตถุดิบ" className="grid size-12 shrink-0 place-items-center rounded-2xl bg-[#d7ff52]"><Plus /></button></div><label className="mt-7 block text-sm font-black">2. มีเวลาทำเท่าไหร่</label><div className="mt-3 grid grid-cols-3 gap-2">{["15 นาที", "30 นาที", "ไม่รีบ"].map((item) => <button type="button" key={item} onClick={() => setTime(item)} className={`rounded-2xl px-3 py-3 text-sm font-black ${time === item ? "bg-[#ff5b4d] text-white" : "bg-[#f6f4ee]"}`}>{item}</button>)}</div><div className="mt-6 rounded-2xl bg-[#f6f4ee] p-4 text-sm font-semibold leading-6 text-black/55"><Sparkles className="mr-2 inline size-5 text-[#ff5b4d]" />AI จะคำนึงถึงอาหารที่แพ้และสิ่งที่ไม่กินของ {profile.name || "คุณ"}</div><Button onClick={() => void generate()} disabled={loading || (!selected.length && !custom.trim())} className="mt-5 h-14 w-full rounded-2xl bg-[#17151c] text-base font-black text-white hover:bg-black">{loading ? "AI กำลังคิดเมนู…" : "คิดเมนูจากของที่มี"}<Sparkles className="ml-2 size-5" /></Button>{error && <p role="alert" className="mt-4 rounded-2xl bg-red-50 p-4 text-sm font-bold text-red-700">{error}</p>}</div></div>
+  return (
+    <section className="mx-auto max-w-7xl px-5 py-10 md:px-10 md:py-14">
+      <div className="grid gap-9 lg:grid-cols-[.8fr_1.2fr]">
+        <div>
+          <span className="inline-flex items-center gap-2 rounded-full bg-[#d7ff52] px-4 py-2 text-sm font-black"><ChefHat className="size-4" /> COOK MATCH</span>
+          <h1 className="mt-5 text-5xl font-black leading-[.9] tracking-[-.06em] md:text-7xl">มีอะไรอยู่<br />ในครัวบ้าง?</h1>
+          <p className="mt-5 max-w-lg font-semibold leading-7 text-black/55">เลือกวัตถุดิบและเวลา แล้วให้ AI คิด 2 เมนูพร้อมขั้นตอนทำจริง</p>
+          <div className="mt-8 overflow-hidden rounded-[32px]"><img src="/food-noodles.jpg" alt="อาหารทำเอง" className="h-72 w-full object-cover" /></div>
+        </div>
+        <div className="rounded-[34px] bg-white p-6 shadow-[0_25px_70px_rgba(30,24,20,.09)] md:p-9">
+          <label className="text-sm font-black">1. เลือกวัตถุดิบที่มี</label>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {options.map((item) => <button type="button" key={item} onClick={() => toggle(item)} className={`rounded-full border px-4 py-2 text-sm font-black transition ${selected.includes(item) ? "border-[#17151c] bg-[#17151c] text-white" : "border-black/10 bg-[#f6f4ee]"}`}>{selected.includes(item) ? <Check className="mr-1 inline size-4" /> : <Plus className="mr-1 inline size-4" />}{item}</button>)}
+            {selected.filter((item) => !options.includes(item)).map((item) => <button type="button" key={`custom-${item}`} onClick={() => toggle(item)} aria-label={`นำ ${item} ออก`} className="rounded-full border border-[#17151c] bg-[#17151c] px-4 py-2 text-sm font-black text-white transition hover:bg-black"><Check className="mr-1 inline size-4" />{item}<X className="ml-2 inline size-3.5" /></button>)}
+          </div>
+          <p className="mt-2 text-xs font-semibold text-black/45">รายการที่เพิ่มเองจะแสดงตรงนี้ และ AI จะช่วยปรับคำสะกดก่อนคิดเมนู</p>
+          <div className="mt-4 flex gap-2">
+            <Input value={custom} maxLength={60} onChange={(event) => setCustom(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addCustomIngredient(); } }} placeholder="เพิ่มวัตถุดิบ เช่น มะเขือเทศ" className="h-12 rounded-2xl border-black/10 bg-[#f6f4ee]" />
+            <button type="button" onClick={addCustomIngredient} disabled={!custom.trim()} aria-label="เพิ่มวัตถุดิบ" className="grid size-12 shrink-0 place-items-center rounded-2xl bg-[#d7ff52] disabled:cursor-not-allowed disabled:opacity-50"><Plus /></button>
+          </div>
+          <label className="mt-7 block text-sm font-black">2. มีเวลาทำเท่าไหร่</label>
+          <div className="mt-3 grid grid-cols-3 gap-2">{["15 นาที", "30 นาที", "ไม่รีบ"].map((item) => <button type="button" key={item} onClick={() => setTime(item)} className={`rounded-2xl px-3 py-3 text-sm font-black ${time === item ? "bg-[#ff5b4d] text-white" : "bg-[#f6f4ee]"}`}>{item}</button>)}</div>
+          <div className="mt-6 rounded-2xl bg-[#f6f4ee] p-4 text-sm font-semibold leading-6 text-black/55"><Sparkles className="mr-2 inline size-5 text-[#ff5b4d]" />AI จะคำนึงถึงอาหารที่แพ้และสิ่งที่ไม่กินของ {profile.name || "คุณ"}</div>
+          <Button onClick={() => void generate()} disabled={loading || (!selected.length && !custom.trim())} className="mt-5 h-14 w-full rounded-2xl bg-[#17151c] text-base font-black text-white hover:bg-black">{loading ? "AI กำลังคิดเมนู…" : "คิดเมนูจากของที่มี"}<Sparkles className="ml-2 size-5" /></Button>
+          {error && <p role="alert" className="mt-4 rounded-2xl bg-red-50 p-4 text-sm font-bold text-red-700">{error}</p>}
+        </div>
+      </div>
     {recipes.length > 0 && <div className="mt-12"><div className="flex items-end justify-between gap-4"><div><span className="text-sm font-black tracking-[.16em] text-[#ff5b4d]">AI RECIPE IDEAS</span><h2 className="mt-2 text-4xl font-black tracking-[-.05em] md:text-6xl">วันนี้ทำเมนูนี้ได้เลย</h2></div><button onClick={() => setRecipes([])} className="hidden items-center gap-2 text-sm font-black text-black/45 md:flex"><RotateCcw className="size-4" />เลือกใหม่</button></div><div className="mt-7 grid gap-5 md:grid-cols-2">{recipes.map((recipe, index) => <article key={`${recipe.name}-${index}`} className="overflow-hidden rounded-[32px] bg-[#17151c] text-white"><div className="relative h-64"><img src={index === 0 ? "/food-friends.jpg" : "/food-noodles.jpg"} alt="" className="h-full w-full object-cover" /><span className="absolute left-5 top-5 rounded-full bg-[#d7ff52] px-4 py-2 text-sm font-black text-black">AI · {recipe.minutes} นาที</span></div><div className="p-6"><h3 className="text-2xl font-black">{recipe.name}</h3><span className="mt-3 inline-block rounded-full bg-white/10 px-3 py-1 text-sm font-bold">ทำได้ใน {recipe.minutes} นาที</span><p className="mt-4 text-sm font-semibold leading-6 text-white/70">{recipe.summary}</p><div className="mt-5 flex flex-wrap gap-2">{[...recipe.ingredients, ...recipe.pantryIngredients].map((ingredient) => <span key={ingredient} className="rounded-full border border-white/15 px-3 py-1 text-xs font-bold">{ingredient}</span>)}</div><button type="button" onClick={() => setActiveRecipe(recipe)} className="mt-6 flex w-full items-center justify-between rounded-2xl bg-white px-5 py-4 font-black text-[#17151c]">ดูวิธีทำแบบย่อ <ArrowRight /></button></div></article>)}</div></div>}
     {activeRecipe && <div className="fixed inset-0 z-[70] grid place-items-center bg-black/55 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setActiveRecipe(null); }}><section role="dialog" aria-modal="true" aria-labelledby="recipe-title" className="max-h-[90dvh] w-full max-w-2xl overflow-y-auto rounded-[30px] bg-[#f6f4ee] p-6 shadow-2xl md:p-8"><div className="flex items-start justify-between gap-4"><div><span className="text-xs font-black tracking-[.16em] text-[#ff5b4d]">AI-สร้างสูตร · {activeRecipe.minutes} นาที</span><h2 id="recipe-title" className="mt-2 text-3xl font-black">{activeRecipe.name}</h2><p className="mt-2 font-semibold text-black/55">{activeRecipe.summary}</p></div><button type="button" onClick={() => setActiveRecipe(null)} aria-label="ปิดวิธีทำ" className="grid size-10 shrink-0 place-items-center rounded-full bg-white"><X /></button></div><div className="mt-6 rounded-2xl bg-white p-5"><h3 className="font-black">วัตถุดิบ</h3><p className="mt-2 text-sm font-semibold leading-6 text-black/65">{[...activeRecipe.ingredients, ...activeRecipe.pantryIngredients].join(" · ")}</p><h3 className="mt-5 font-black">ขั้นตอน</h3><ol className="mt-3 space-y-3">{activeRecipe.steps.map((step, index) => <li key={`${index}-${step}`} className="flex gap-3 text-sm font-semibold leading-6"><span className="grid size-7 shrink-0 place-items-center rounded-full bg-[#d7ff52] font-black">{index + 1}</span><span>{step}</span></li>)}</ol></div><p className="mt-4 rounded-2xl bg-amber-50 p-4 text-xs font-semibold leading-5 text-amber-900">สูตรสร้างโดย AI ควรตรวจสอบวัตถุดิบกับอาการแพ้ของคุณอีกครั้ง และปรุงเนื้อสัตว์/ไข่ให้สุกทั่วถึงก่อนรับประทาน</p></section></div>}
-  </section>;
+    </section>
+  );
 }
 
 function EatPage({ profile, needProfile, clientId, addMeal }: { profile: Profile; needProfile: () => void; clientId: string; addMeal: (s: Scenario) => void }) {
