@@ -50,3 +50,10 @@ test("blocks an ingredient that directly matches a declared allergy", () => {
 test("requires a server API key", async () => {
   await assert.rejects(() => generateCookRecipes(request, { apiKey: "" }), /GEMINI_API_KEY/u);
 });
+
+test("preserves Gemini's safe error response for server-side diagnosis", async () => {
+  await assert.rejects(() => generateCookRecipes(request, {
+    apiKey: "test-key",
+    fetchImpl: async () => new Response(JSON.stringify({ error: { message: "Invalid model schema" } }), { status: 400 }),
+  }), /HTTP 400: .*Invalid model schema/u);
+});

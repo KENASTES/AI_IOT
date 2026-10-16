@@ -123,7 +123,12 @@ export async function generateCookRecipes(input, options = {}) {
     }),
     signal: AbortSignal.timeout(20000),
   });
-  if (!response.ok) throw new Error(`Gemini ตอบกลับ HTTP ${response.status}`);
+  if (!response.ok) {
+    // Keep Google's diagnostic in the server log so 4xx configuration/schema
+    // errors can be fixed; never log request headers or the API key.
+    const details = (await response.text()).slice(0, 500);
+    throw new Error(`Gemini ตอบกลับ HTTP ${response.status}: ${details}`);
+  }
   const body = await response.json();
   const text = body?.candidates?.[0]?.content?.parts?.find((part) => typeof part.text === "string")?.text;
   if (!text) throw new Error("AI ไม่ได้ส่งสูตรอาหารกลับมา กรุณาลองใหม่");
