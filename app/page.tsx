@@ -35,11 +35,6 @@ const quiz = [
   { title: "มื้อนี้เอาอะไรเป็นหลัก?", kicker: "5 · GOAL", options: ["อิ่มคุ้ม", "โปรตีน", "เซอร์ไพรส์ฉัน"] },
 ];
 
-const recipes = [
-  { name: "ข้าวผัดไข่คลีนตู้เย็น", time: "15 นาที", fit: "ใช้วัตถุดิบที่เลือกครบ ทำกระทะเดียว และปรับรสตามโปรไฟล์", image: "/food-friends.jpg", ingredients: ["ข้าว", "ไข่", "ผักรวม", "ซีอิ๊ว"] },
-  { name: "บะหมี่ไข่ออนเซ็นซุปหอม", time: "20 นาที", fit: "เหมาะกับวันอยากกินของร้อน ใช้อุปกรณ์น้อยและคุมงบได้", image: "/food-noodles.jpg", ingredients: ["เส้น", "ไข่", "ต้นหอม", "น้ำซุป"] },
-];
-
 function budgetFromAnswer(answer: string, fallback: number): number {
   const range = answer.match(/฿\s*(\d+)\s*[–-]\s*฿?\s*(\d+)/u);
   if (range) return Number(range[2]);
@@ -194,16 +189,82 @@ function Feature({ icon: Icon, title, text }: { icon: typeof BadgeCheck; title: 
 
 function Stat({ value, label }: { value: string }) { return <div><b className="block">{value}</b></div>; } */
 
-function CookPage({ profile, needProfile }: { profile: Profile; needProfile: () => void }) {
+/* function LegacyCookPage({ profile, needProfile }: { profile: Profile; needProfile: () => void }) {
   const options = ["ไข่", "ข้าว", "ไก่", "หมู", "เส้น", "ผัก", "เต้าหู้", "ชีส"]; const [selected, setSelected] = useState<string[]>(["ไข่", "ข้าว"]); const [custom, setCustom] = useState(""); const [time, setTime] = useState("15 นาที"); const [result, setResult] = useState(false);
   const toggle = (item: string) => setSelected((v) => v.includes(item) ? v.filter((x) => x !== item) : [...v, item]); const generate = () => { if (!profile.name) return needProfile(); if (custom.trim()) setSelected((v) => [...new Set([...v, custom.trim()])]); setResult(true); };
   return <section className="mx-auto max-w-7xl px-5 py-10 md:px-10 md:py-14"><div className="grid gap-9 lg:grid-cols-[.8fr_1.2fr]"><div><span className="inline-flex items-center gap-2 rounded-full bg-[#d7ff52] px-4 py-2 text-sm font-black"><ChefHat className="size-4" /> COOK MATCH</span><h1 className="mt-5 text-5xl font-black leading-[.9] tracking-[-.06em] md:text-7xl">มีอะไรอยู่<br />ในครัวบ้าง?</h1><p className="mt-5 max-w-lg font-semibold leading-7 text-black/55">เลือกวัตถุดิบและเวลาที่มี ระบบจะเสนอ 2 เมนูที่ทำได้จริง พร้อมเหตุผลและขั้นตอนย่อ</p><div className="mt-8 overflow-hidden rounded-[32px]"><img src="/food-noodles.jpg" alt="อาหารทำเอง" className="h-72 w-full object-cover" /></div></div><div className="rounded-[34px] bg-white p-6 shadow-[0_25px_70px_rgba(30,24,20,.09)] md:p-9"><label className="text-sm font-black">1. เลือกวัตถุดิบที่มี</label><div className="mt-4 flex flex-wrap gap-2">{options.map((item) => <button key={item} onClick={() => toggle(item)} className={`rounded-full border px-4 py-2 text-sm font-black transition ${selected.includes(item) ? "border-[#17151c] bg-[#17151c] text-white" : "border-black/10 bg-[#f6f4ee]"}`}>{selected.includes(item) ? <Check className="mr-1 inline size-4" /> : <Plus className="mr-1 inline size-4" />}{item}</button>)}</div><div className="mt-4 flex gap-2"><Input value={custom} onChange={(e) => setCustom(e.target.value)} placeholder="เพิ่มวัตถุดิบ เช่น มะเขือเทศ" className="h-12 rounded-2xl border-black/10 bg-[#f6f4ee]" /><button onClick={() => { if (custom.trim()) { setSelected((v) => [...new Set([...v, custom.trim()])]); setCustom(""); } }} className="grid size-12 shrink-0 place-items-center rounded-2xl bg-[#d7ff52]"><Plus /></button></div><label className="mt-7 block text-sm font-black">2. มีเวลาทำเท่าไหร่</label><div className="mt-3 grid grid-cols-3 gap-2">{["15 นาที", "30 นาที", "ไม่รีบ"].map((item) => <button key={item} onClick={() => setTime(item)} className={`rounded-2xl px-3 py-3 text-sm font-black ${time === item ? "bg-[#ff5b4d] text-white" : "bg-[#f6f4ee]"}`}>{item}</button>)}</div><div className="mt-6 rounded-2xl bg-[#f6f4ee] p-4 text-sm font-semibold leading-6 text-black/55"><Sparkles className="mr-2 inline size-5 text-[#ff5b4d]" />จะคัดข้อแพ้และสิ่งที่ไม่กินจาก Dashboard ของ {profile.name || "คุณ"} ให้อัตโนมัติ</div><Button onClick={generate} disabled={!selected.length} className="mt-5 h-14 w-full rounded-2xl bg-[#17151c] text-base font-black text-white hover:bg-black">คิดเมนูจากของที่มี <Sparkles className="ml-2 size-5" /></Button></div></div>{result && <div className="mt-12"><div className="flex items-end justify-between gap-4"><div><span className="text-sm font-black tracking-[.16em] text-[#ff5b4d]">2 RECIPE SCENARIOS</span><h2 className="mt-2 text-4xl font-black tracking-[-.05em] md:text-6xl">วันนี้ทำเมนูนี้ได้เลย</h2></div><button onClick={() => setResult(false)} className="hidden items-center gap-2 text-sm font-black text-black/45 md:flex"><RotateCcw className="size-4" />เลือกใหม่</button></div><div className="mt-7 grid gap-5 md:grid-cols-2">{recipes.map((recipe, i) => <article key={recipe.name} className="overflow-hidden rounded-[32px] bg-[#17151c] text-white"><div className="relative h-64"><img src={recipe.image} alt={recipe.name} className="h-full w-full object-cover" /><span className="absolute left-5 top-5 rounded-full px-4 py-2 text-sm font-black text-black" style={{ background: i ? "#ffb62e" : "#d7ff52" }}>{i ? "88" : "95"}% MATCH</span></div><div className="p-6"><h3 className="text-2xl font-black">{recipe.name}</h3><div className="mt-3 flex gap-2"><span className="rounded-full bg-white/10 px-3 py-1 text-sm font-bold">{recipe.time}</span><span className="rounded-full bg-white/10 px-3 py-1 text-sm font-bold">ทำง่าย</span></div><p className="mt-4 text-sm font-semibold leading-6 text-white/60">{recipe.fit}</p><div className="mt-5 flex flex-wrap gap-2">{recipe.ingredients.map((x) => <span key={x} className="rounded-full border border-white/15 px-3 py-1 text-xs font-bold">{x}</span>)}</div><button className="mt-6 flex w-full items-center justify-between rounded-2xl bg-white px-5 py-4 font-black text-[#17151c]">ดูวิธีทำแบบย่อ <ArrowRight /></button></div></article>)}</div></div>}</section>;
-}
+} */
 
 /* function LegacyMemoryPage({ profile }: { profile: Profile }) {
   const spent = 1340; const left = Math.max(profile.monthlyBudget - spent, 0); const pct = Math.min(100, Math.round((spent / profile.monthlyBudget) * 100));
   return <section className="mx-auto max-w-7xl px-5 py-10 md:px-10 md:py-14"><div className="flex flex-wrap items-end justify-between gap-5"><div><span className="text-sm font-black tracking-[.18em] text-[#ff5b4d]">FOOD MEMORY</span><h1 className="mt-2 text-5xl font-black tracking-[-.06em] md:text-7xl">ยิ่งกิน ยิ่งรู้ใจ</h1></div><div className="rounded-full bg-[#17151c] px-5 py-3 text-sm font-black text-white">เรียนรู้แล้ว 12 มื้อ</div></div><div className="mt-8 grid gap-5 md:grid-cols-3">{memoryItems.map((item, i) => <article key={item.name} className="group overflow-hidden rounded-[28px] bg-white p-3 shadow-[0_20px_50px_rgba(30,24,20,.08)]"><div className="relative h-52 overflow-hidden rounded-[20px]"><img src={item.image} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" /><span className="absolute right-3 top-3 rounded-full bg-white px-3 py-1 text-sm font-black">{i === 0 ? "ล่าสุด" : "ชอบ"}</span></div><div className="p-3"><h2 className="text-xl font-black">{item.name}</h2><p className="mt-1 text-sm font-semibold text-black/45">{item.date}</p><div className="mt-4 flex justify-between"><b>฿{item.price}</b><Heart className="size-5 fill-[#ff5b4d] text-[#ff5b4d]" /></div></div></article>)}</div><div className="mt-8 grid gap-5 lg:grid-cols-[1.2fr_.8fr]"><div className="rounded-[32px] bg-[#d7ff52] p-7 md:p-10"><div className="flex justify-between"><b>SMART BUDGET · เดือนนี้</b><WalletCards /></div><span className="mt-8 block text-sm font-black">คงเหลือ</span><div className="mt-1 text-6xl font-black tracking-[-.07em] md:text-8xl">฿{left.toLocaleString()}</div><div className="mt-8 h-4 overflow-hidden rounded-full bg-black/10"><div className="h-full rounded-full bg-[#17151c]" style={{ width: `${pct}%` }} /></div><div className="mt-3 flex justify-between text-sm font-black"><span>ใช้แล้ว ฿{spent.toLocaleString()}</span><span>{pct}% ของงบ</span></div></div><div className="rounded-[32px] bg-[#ff5b4d] p-7 text-white md:p-9"><Sparkles className="size-8" /><h2 className="mt-6 text-3xl font-black">AI Insight ของ {profile.name || "คุณ"}</h2><p className="mt-3 font-semibold leading-7 text-white/75">มักเลือกอาหารเส้นช่วงกลางวัน และชอบเมนูที่รอไม่เกิน 8 นาที ระบบจะดันตัวเลือกแบบนี้ขึ้นก่อน</p><div className="mt-8 rounded-2xl bg-white/15 p-4"><span className="text-sm font-bold text-white/65">งบแนะนำวันนี้</span><b className="mt-1 block text-3xl">฿{profile.dailyBudget}</b></div></div></div></section>;
 } */
+
+type CookRecipe = {
+  name: string;
+  summary: string;
+  minutes: number;
+  ingredients: string[];
+  pantryIngredients: string[];
+  steps: string[];
+};
+
+function CookPage({ profile, needProfile }: { profile: Profile; needProfile: () => void }) {
+  const options = ["ไข่", "ข้าว", "ไก่", "หมู", "เส้น", "ผัก", "เต้าหู้", "ชีส"];
+  const [selected, setSelected] = useState<string[]>(["ไข่", "ข้าว"]);
+  const [custom, setCustom] = useState("");
+  const [time, setTime] = useState("15 นาที");
+  const [recipes, setRecipes] = useState<CookRecipe[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [activeRecipe, setActiveRecipe] = useState<CookRecipe | null>(null);
+  const toggle = (item: string) => setSelected((current) => current.includes(item) ? current.filter((value) => value !== item) : [...current, item]);
+
+  const generate = async () => {
+    if (!profile.name) { needProfile(); return; }
+    const ingredients = [...new Set([...selected, custom.trim()].filter(Boolean))];
+    if (!ingredients.length) { setError("เลือกหรือเพิ่มวัตถุดิบอย่างน้อย 1 อย่างก่อน"); return; }
+    setLoading(true);
+    setError("");
+    setRecipes([]);
+    try {
+      const response = await fetch("/api/food/recipes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ingredients, time, allergies: profile.allergies, dislikes: profile.dislikes, conditions: profile.conditions }),
+      });
+      // The Vite proxy can return an empty/non-JSON 502 when food-api is offline.
+      // Read text first so that case becomes an actionable message instead of a
+      // JSON parsing exception exposed directly in the UI.
+      const responseText = await response.text();
+      let result: { recipes?: CookRecipe[]; error?: string } = {};
+      try {
+        if (responseText.trim()) result = JSON.parse(responseText) as typeof result;
+      } catch {
+        if (!response.ok) {
+          throw new Error(`เชื่อมต่อ food-api ไม่ได้ (HTTP ${response.status}) กรุณาเปิดบริการ food-api แล้วลองอีกครั้ง`);
+        }
+        throw new Error("เซิร์ฟเวอร์ส่งคำตอบกลับมาไม่สมบูรณ์ กรุณาลองใหม่");
+      }
+      if (!response.ok || !Array.isArray(result.recipes) || result.recipes.length !== 2) {
+        throw new Error(result.error || (response.status >= 500
+          ? `บริการ AI ตอบกลับผิดพลาด (HTTP ${response.status}) กรุณาตรวจสอบ food-api แล้วลองใหม่`
+          : "AI สร้างเมนูไม่สำเร็จ กรุณาลองใหม่"));
+      }
+      setRecipes(result.recipes);
+    } catch (cause) {
+      setError(cause instanceof TypeError
+        ? "เชื่อมต่อ food-api ไม่ได้ กรุณาเปิดบริการ food-api แล้วลองอีกครั้ง"
+        : cause instanceof Error ? cause.message : "เชื่อมต่อ AI ไม่สำเร็จ กรุณาลองใหม่");
+    } finally { setLoading(false); }
+  };
+
+  return <section className="mx-auto max-w-7xl px-5 py-10 md:px-10 md:py-14"><div className="grid gap-9 lg:grid-cols-[.8fr_1.2fr]"><div><span className="inline-flex items-center gap-2 rounded-full bg-[#d7ff52] px-4 py-2 text-sm font-black"><ChefHat className="size-4" /> COOK MATCH</span><h1 className="mt-5 text-5xl font-black leading-[.9] tracking-[-.06em] md:text-7xl">มีอะไรอยู่<br />ในครัวบ้าง?</h1><p className="mt-5 max-w-lg font-semibold leading-7 text-black/55">เลือกวัตถุดิบและเวลา แล้วให้ AI คิด 2 เมนูพร้อมขั้นตอนทำจริง</p><div className="mt-8 overflow-hidden rounded-[32px]"><img src="/food-noodles.jpg" alt="อาหารทำเอง" className="h-72 w-full object-cover" /></div></div>
+    <div className="rounded-[34px] bg-white p-6 shadow-[0_25px_70px_rgba(30,24,20,.09)] md:p-9"><label className="text-sm font-black">1. เลือกวัตถุดิบที่มี</label><div className="mt-4 flex flex-wrap gap-2">{options.map((item) => <button type="button" key={item} onClick={() => toggle(item)} className={`rounded-full border px-4 py-2 text-sm font-black transition ${selected.includes(item) ? "border-[#17151c] bg-[#17151c] text-white" : "border-black/10 bg-[#f6f4ee]"}`}>{selected.includes(item) ? <Check className="mr-1 inline size-4" /> : <Plus className="mr-1 inline size-4" />}{item}</button>)}</div><div className="mt-4 flex gap-2"><Input value={custom} onChange={(event) => setCustom(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void generate(); } }} placeholder="เพิ่มวัตถุดิบ เช่น มะเขือเทศ" className="h-12 rounded-2xl border-black/10 bg-[#f6f4ee]" /><button type="button" onClick={() => { if (custom.trim()) { setSelected((current) => [...new Set([...current, custom.trim()])]); setCustom(""); } }} aria-label="เพิ่มวัตถุดิบ" className="grid size-12 shrink-0 place-items-center rounded-2xl bg-[#d7ff52]"><Plus /></button></div><label className="mt-7 block text-sm font-black">2. มีเวลาทำเท่าไหร่</label><div className="mt-3 grid grid-cols-3 gap-2">{["15 นาที", "30 นาที", "ไม่รีบ"].map((item) => <button type="button" key={item} onClick={() => setTime(item)} className={`rounded-2xl px-3 py-3 text-sm font-black ${time === item ? "bg-[#ff5b4d] text-white" : "bg-[#f6f4ee]"}`}>{item}</button>)}</div><div className="mt-6 rounded-2xl bg-[#f6f4ee] p-4 text-sm font-semibold leading-6 text-black/55"><Sparkles className="mr-2 inline size-5 text-[#ff5b4d]" />AI จะคำนึงถึงอาหารที่แพ้และสิ่งที่ไม่กินของ {profile.name || "คุณ"}</div><Button onClick={() => void generate()} disabled={loading || (!selected.length && !custom.trim())} className="mt-5 h-14 w-full rounded-2xl bg-[#17151c] text-base font-black text-white hover:bg-black">{loading ? "AI กำลังคิดเมนู…" : "คิดเมนูจากของที่มี"}<Sparkles className="ml-2 size-5" /></Button>{error && <p role="alert" className="mt-4 rounded-2xl bg-red-50 p-4 text-sm font-bold text-red-700">{error}</p>}</div></div>
+    {recipes.length > 0 && <div className="mt-12"><div className="flex items-end justify-between gap-4"><div><span className="text-sm font-black tracking-[.16em] text-[#ff5b4d]">AI RECIPE IDEAS</span><h2 className="mt-2 text-4xl font-black tracking-[-.05em] md:text-6xl">วันนี้ทำเมนูนี้ได้เลย</h2></div><button onClick={() => setRecipes([])} className="hidden items-center gap-2 text-sm font-black text-black/45 md:flex"><RotateCcw className="size-4" />เลือกใหม่</button></div><div className="mt-7 grid gap-5 md:grid-cols-2">{recipes.map((recipe, index) => <article key={`${recipe.name}-${index}`} className="overflow-hidden rounded-[32px] bg-[#17151c] text-white"><div className="relative h-64"><img src={index === 0 ? "/food-friends.jpg" : "/food-noodles.jpg"} alt="" className="h-full w-full object-cover" /><span className="absolute left-5 top-5 rounded-full bg-[#d7ff52] px-4 py-2 text-sm font-black text-black">AI · {recipe.minutes} นาที</span></div><div className="p-6"><h3 className="text-2xl font-black">{recipe.name}</h3><span className="mt-3 inline-block rounded-full bg-white/10 px-3 py-1 text-sm font-bold">ทำได้ใน {recipe.minutes} นาที</span><p className="mt-4 text-sm font-semibold leading-6 text-white/70">{recipe.summary}</p><div className="mt-5 flex flex-wrap gap-2">{[...recipe.ingredients, ...recipe.pantryIngredients].map((ingredient) => <span key={ingredient} className="rounded-full border border-white/15 px-3 py-1 text-xs font-bold">{ingredient}</span>)}</div><button type="button" onClick={() => setActiveRecipe(recipe)} className="mt-6 flex w-full items-center justify-between rounded-2xl bg-white px-5 py-4 font-black text-[#17151c]">ดูวิธีทำแบบย่อ <ArrowRight /></button></div></article>)}</div></div>}
+    {activeRecipe && <div className="fixed inset-0 z-[70] grid place-items-center bg-black/55 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setActiveRecipe(null); }}><section role="dialog" aria-modal="true" aria-labelledby="recipe-title" className="max-h-[90dvh] w-full max-w-2xl overflow-y-auto rounded-[30px] bg-[#f6f4ee] p-6 shadow-2xl md:p-8"><div className="flex items-start justify-between gap-4"><div><span className="text-xs font-black tracking-[.16em] text-[#ff5b4d]">AI-สร้างสูตร · {activeRecipe.minutes} นาที</span><h2 id="recipe-title" className="mt-2 text-3xl font-black">{activeRecipe.name}</h2><p className="mt-2 font-semibold text-black/55">{activeRecipe.summary}</p></div><button type="button" onClick={() => setActiveRecipe(null)} aria-label="ปิดวิธีทำ" className="grid size-10 shrink-0 place-items-center rounded-full bg-white"><X /></button></div><div className="mt-6 rounded-2xl bg-white p-5"><h3 className="font-black">วัตถุดิบ</h3><p className="mt-2 text-sm font-semibold leading-6 text-black/65">{[...activeRecipe.ingredients, ...activeRecipe.pantryIngredients].join(" · ")}</p><h3 className="mt-5 font-black">ขั้นตอน</h3><ol className="mt-3 space-y-3">{activeRecipe.steps.map((step, index) => <li key={`${index}-${step}`} className="flex gap-3 text-sm font-semibold leading-6"><span className="grid size-7 shrink-0 place-items-center rounded-full bg-[#d7ff52] font-black">{index + 1}</span><span>{step}</span></li>)}</ol></div><p className="mt-4 rounded-2xl bg-amber-50 p-4 text-xs font-semibold leading-5 text-amber-900">สูตรสร้างโดย AI ควรตรวจสอบวัตถุดิบกับอาการแพ้ของคุณอีกครั้ง และปรุงเนื้อสัตว์/ไข่ให้สุกทั่วถึงก่อนรับประทาน</p></section></div>}
+  </section>;
+}
 
 function EatPage({ profile, needProfile, clientId, addMeal }: { profile: Profile; needProfile: () => void; clientId: string; addMeal: (s: Scenario) => void }) {
   const [phase, setPhase] = useState<"intro" | "quiz" | "result">("intro");

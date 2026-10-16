@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { MongoClient, ObjectId } from "mongodb";
 import { scoreCandidates } from "./food-ranking.mjs";
 import { explainRecommendations } from "./food-explainer.mjs";
+import { generateCookRecipes, recipeTestHelpers } from "./food-recipes.mjs";
 
 const PORT = Number(process.env.FOOD_API_PORT || 3001);
 const MAX_BODY_BYTES = 64 * 1024;
@@ -214,6 +215,33 @@ const server = createServer(async (request, response) => {
     } catch (error) {
       console.error("MongoDB memory save failed:", error.message);
       sendJson(response, 400, { error: error.message || "Could not save food memory" });
+    }
+    return;
+  }
+  if (request.method === "POST" && url.pathname === "/api/food/recipes") {
+    let payload;
+    try {
+      payload = await readJson(request);
+    } catch {
+      sendJson(response, 400, { error: "Request body must be valid JSON and no larger than 64 KB" });
+      return;
+    }
+    try {
+      recipeTestHelpers.validateRequest(payload);
+    } catch (error) {
+      sendJson(response, 400, { error: error.message });
+      return;
+    }
+    try {
+      sendJson(response, 200, await generateCookRecipes(payload));
+    } catch (error) {
+      console.error("AI recipe generation failed:", error.message);
+      const missingKey = !process.env.GEMINI_API_KEY;
+      sendJson(response, missingKey ? 503 : 502, {
+        error: missingKey
+          ? "AI ยังไม่ได้ตั้งค่า GEMINI_API_KEY ในบริการ food-api"
+          : "AI สร้างสูตรไม่สำเร็จ กรุณาตรวจ Gemini API แล้วลองใหม่",
+      });
     }
     return;
   }
