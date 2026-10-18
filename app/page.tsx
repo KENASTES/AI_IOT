@@ -586,12 +586,15 @@ function EatPage({ profile, needProfile, clientId, addMeal }: { profile: Profile
 function ScoreBreakdownList({ items }: { items: Scenario[] }) {
   if (!items.some((item) => item.scoreBreakdown?.length)) return null;
   return <div className="mt-4 space-y-2 border-t border-black/5 pt-4">
-    <b className="text-xs font-black uppercase tracking-[.12em] text-black/40">ที่มาคะแนนของแต่ละเมนู</b>
-    {items.map((item) => <div key={item.id} className="rounded-2xl bg-[#f6f4ee] p-3">
-      <div className="flex items-baseline justify-between gap-2"><span className="text-sm font-black">{item.name}</span><span className="shrink-0 text-sm font-black">{item.score}% Match</span></div>
-      <p className="mt-1 text-xs font-semibold leading-5 text-black/55">{item.scoreBreakdown.map((part) => `${part.label} ${part.score}/100 × ${part.weight}%`).join(" + ")}</p>
-    </div>)}
-    <p className="text-xs font-semibold leading-5 text-black/40">คะแนน Match คือผลรวมถ่วงน้ำหนักของเกณฑ์เหล่านี้ ไม่ใช่ความแม่นยำของ AI</p>
+    <b className="text-xs font-black uppercase tracking-[.12em] text-black/40">คะแนนของแต่ละเมนู</b>
+    {items.map((item) => {
+      const visibleBreakdown = item.scoreBreakdown.filter((part) => part.label !== "งบ");
+      return <div key={item.id} className="rounded-2xl bg-[#f6f4ee] p-3">
+        <div className="flex items-baseline justify-between gap-2"><span className="text-sm font-black">{item.name}</span><span className="shrink-0 text-sm font-black">{item.score}% Match</span></div>
+        {visibleBreakdown.length > 0 && <p className="mt-1 text-xs font-semibold leading-5 text-black/55">{visibleBreakdown.map((part) => `${part.label} ${part.score}/100 × ${part.weight}%`).join(" + ")}</p>}
+      </div>;
+    })}
+    <p className="text-xs font-semibold leading-5 text-black/40">คะแนน Match ใช้จัดอันดับจากคำตอบและข้อมูลเมนู ไม่ใช่ความแม่นยำของ AI</p>
   </div>;
 }
 
