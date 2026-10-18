@@ -18,6 +18,7 @@ const allergyAliases = {
 
 let mongoClient;
 let mongoClientPromise;
+let recommendationFeedbackIndexPromise;
 
 async function getStoreCollection() {
   const uri = process.env.MONGODB_URI;
@@ -113,6 +114,57 @@ async function saveMemory(clientId, menuId) {
   };
   const result = await (await getDatabase()).collection("food_memories").insertOne(record);
   return { ...record, _id: result.insertedId };
+}
+
+async function getRecommendationFeedbackCollection() {
+  const collection = (await getDatabase()).collection("food_recommendation_feedback");
+  if (!recommendationFeedbackIndexPromise) {
+    recommendationFeedbackIndexPromise = collection.createIndex(
+      { clientId: 1, batchId: 1, menuId: 1 },
+      { unique: true, name: "unique_recommendation_vote" },
+    ).catch((error) => {
+      recommendationFeedbackIndexPromise = undefined;
+      throw error;
+    });
+  }
+  await recommendationFeedbackIndexPromise;
+  return collection;
+}
+
+async function saveRecommendationFeedback(payload) {
+  const { clientId, batchId, menuId, accepted, provider, score, menuName } = payload || {};
+  if (!validClientId(clientId)) throw new Error("A valid clientId is required");
+  if (typeof batchId !== "string" || !/^[a-f0-9-]{36}$/iu.test(batchId)) throw new Error("Invalid recommendation batch");
+  const [storeId, indexText] = typeof menuId === "string" ? menuId.split(":") : [];
+  if (!ObjectId.isValid(storeId) || !/^\d{1,4}$/u.test(indexText || "")) throw new Error("Invalid menuId");
+  if (typeof accepted !== "boolean") throw new Error("Feedback must be positive or negative");
+  if (provider !== "gemini" && provider !== "database") throw new Error("Invalid recommendation provider");
+  if (!Number.isInteger(score) || score < 0 || score > 100) throw new Error("Invalid match score");
+  if (typeof menuName !== "string" || !menuName.trim() || menuName.length > 120) throw new Error("Invalid menu name");
+
+  const now = new Date();
+  await (await getRecommendationFeedbackCollection()).updateOne(
+    { clientId, batchId, menuId },
+    {
+      $set: { accepted, provider, score, menuName: menuName.trim(), updatedAt: now },
+      $setOnInsert: { clientId, batchId, menuId, createdAt: now },
+    },
+    { upsert: true },
+  );
+}
+
+async function getRecommendationFeedbackStats() {
+  const [stats] = await (await getRecommendationFeedbackCollection()).aggregate([
+    { $match: { provider: "gemini" } },
+    { $group: {
+      _id: null,
+      total: { $sum: 1 },
+      accepted: { $sum: { $cond: ["$accepted", 1, 0] } },
+    } },
+  ]).toArray();
+  const total = stats?.total || 0;
+  const accepted = stats?.accepted || 0;
+  return { total, accepted, acceptanceRate: total ? Math.round((accepted / total) * 100) : null };
 }
 
 function sanitizeProfile(profile) {
@@ -331,6 +383,30 @@ const server = createServer(async (request, response) => {
     } catch (error) {
       console.error("MongoDB memory lookup failed:", error.message);
       sendJson(response, 503, { error: "Could not load food memory" });
+    }
+    return;
+  }
+  if (request.method === "GET" && url.pathname === "/api/food/recommendation-feedback") {
+    try {
+      sendJson(response, 200, await getRecommendationFeedbackStats());
+    } catch (error) {
+      console.error("MongoDB recommendation feedback lookup failed:", error.message);
+      sendJson(response, 503, { error: "Could not load recommendation feedback statistics" });
+    }
+    return;
+  }
+  if (request.method === "POST" && url.pathname === "/api/food/recommendation-feedback") {
+    let payload;
+    try { payload = await readJson(request); } catch {
+      sendJson(response, 400, { error: "Request body must be valid JSON and no larger than 64 KB" });
+      return;
+    }
+    try {
+      await saveRecommendationFeedback(payload);
+      sendJson(response, 200, { saved: true });
+    } catch (error) {
+      console.error("MongoDB recommendation feedback save failed:", error.message);
+      sendJson(response, 400, { error: error.message || "Could not save recommendation feedback" });
     }
     return;
   }
