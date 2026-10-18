@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowLeft, ArrowRight, BadgeCheck, BookHeart, Check, ChefHat, Flame,
+  ArrowLeft, ArrowRight, BadgeCheck, BookHeart, CalendarDays, Check, ChefHat, Flame,
   Heart, MapPin, Menu, Navigation, Plus, RotateCcw, Save, Sparkles, Star, Trash2,
   UserRound, WalletCards, X, Zap,
 } from "lucide-react";
@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { rankFilteredFoods } from "@/lib/food-ranker";
 
-type Screen = "home" | "eat" | "cook" | "memory";
+type Screen = "home" | "eat" | "cook" | "memory" | "budget";
 type Profile = {
   name: string; age: string; height: string; weight: string;
   allergies: string; conditions: string; dislikes: string;
@@ -30,6 +30,8 @@ type AiFeedbackRoundStats = { rounds: number; successfulRounds: number; acceptan
 type AiFeedbackStats = AiFeedbackRoundStats & { gemini: AiFeedbackRoundStats; database: AiFeedbackRoundStats };
 type LiveStats = { storeCount: number; menuCount: number; memoryCount: number };
 type MemoryItem = { _id: string; menuName: string; storeName: string; price: number; image: string; savedAt: string };
+type BudgetTransaction = { _id: string; menuName: string; storeName: string; amount: number; createdAt: string };
+type BudgetSummary = { totalSpentMonth: number; totalSpentToday: number; daysRemaining: number; transactions: BudgetTransaction[] };
 
 const emptyProfile: Profile = { name: "", age: "", height: "", weight: "", allergies: "", conditions: "", dislikes: "", monthlyBudget: 3200, dailyBudget: 95 };
 const demoProfile: Profile = { ...emptyProfile, name: "มินท์", age: "20", height: "162", weight: "52", allergies: "ถั่วลิสง", conditions: "ไม่มี", dislikes: "ไม่กินเผ็ดมาก" };
@@ -60,6 +62,15 @@ async function saveFoodMemory(clientId: string, menuId: string): Promise<void> {
     body: JSON.stringify({ clientId, menuId }),
   });
   if (!response.ok) throw new Error("บันทึก Food Memory ไม่สำเร็จ");
+}
+
+async function recordFoodExpense(clientId: string, menuId: string, transactionId: string): Promise<void> {
+  const response = await fetch("/api/food/budget", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ clientId, menuId, transactionId }),
+  });
+  if (!response.ok) throw new Error("บันทึกรายจ่ายไม่สำเร็จ");
 }
 
 async function deleteFoodMemory(clientId: string, memoryId: string): Promise<void> {
@@ -128,6 +139,7 @@ function Header({ screen, onNavigate, onProfile }: { screen: Screen; onNavigate:
   const links: { id: Screen; label: string }[] = [
     { id: "home", label: "Home" }, { id: "eat", label: "กินไรดี" },
     { id: "cook", label: "ทำเมนูไรกินดี" }, { id: "memory", label: "Food Memory" },
+    { id: "budget", label: "Smart Budget" },
   ];
   return <header className="sticky top-0 z-40 border-b border-black/[.06] bg-[#f6f4ee]/90 backdrop-blur-xl">
     <div className="mx-auto flex h-[76px] max-w-7xl items-center justify-between px-5 md:px-10">
@@ -626,7 +638,7 @@ function SwipeDeck({ items, loading, onPicked, onFeedback, onNextBatch }: { item
     </article>
     <p className="mt-4 text-center text-sm font-black text-black/50">← ปัดซ้าย: ทิ้ง <span className="mx-2 text-black/20">·</span> ปัดขวา: ชอบ →</p>
     <div className="mt-3 flex items-center justify-center gap-4"><button onClick={() => setIndex((value) => Math.max(0, value - 1))} aria-label="ย้อนเมนู" className="grid size-12 place-items-center rounded-full bg-white text-[#ffb62e] shadow-lg"><RotateCcw/></button><button onClick={() => dismiss(false)} aria-label="ทิ้งเมนูนี้" className="grid size-16 place-items-center rounded-full bg-white text-[#ff5b4d] shadow-xl"><X className="size-8"/></button><button onClick={() => dismiss(true)} aria-label="ชอบเมนูนี้" className="grid size-16 place-items-center rounded-full bg-[#d7ff52] shadow-xl"><Heart className="size-8 fill-current"/></button><button onClick={onNextBatch} aria-label="เมนูชุดใหม่" className="grid size-12 place-items-center rounded-full bg-[#17151c] text-[#d7ff52] shadow-lg"><Zap className="fill-current"/></button></div>
-    {match && <div className="fixed inset-0 z-[70] grid place-items-center bg-black/45 p-5"><div className="w-full max-w-sm rounded-[28px] bg-white p-6 text-center"><h3 className="text-2xl font-black">ชอบ {match.name}?</h3><p className="mt-2 text-sm font-semibold text-black/55">บันทึกลง Food Memory ของคุณ</p><div className="mt-5 flex gap-3"><button onClick={() => setMatch(null)} className="flex-1 rounded-xl bg-black/5 py-3 font-black">ยกเลิก</button><button onClick={() => { onFeedback(match, true); onPicked(match); setMatch(null); }} className="flex-1 rounded-xl bg-[#d7ff52] py-3 font-black">เลือกมื้อนี้</button></div></div></div>}
+    {match && <div className="fixed inset-0 z-[70] grid place-items-center bg-black/45 p-5"><div className="w-full max-w-sm rounded-[28px] bg-white p-6 text-center"><h3 className="text-2xl font-black">ชอบ {match.name}?</h3><p className="mt-2 text-sm font-semibold text-black/55">ยืนยันแล้วจะบันทึกเป็นรายจ่าย ฿{match.price} และเพิ่มลง Food Memory</p><div className="mt-5 flex gap-3"><button onClick={() => setMatch(null)} className="flex-1 rounded-xl bg-black/5 py-3 font-black">ยกเลิก</button><button onClick={() => { onFeedback(match, true); onPicked(match); setMatch(null); }} className="flex-1 rounded-xl bg-[#d7ff52] py-3 font-black">เลือกมื้อนี้</button></div></div></div>}
   </div>;
 }
 
@@ -661,8 +673,51 @@ function MemoryPage({ profile, clientId }: { profile: Profile; clientId: string 
   return <section className="mx-auto max-w-7xl px-5 py-10 md:px-10 md:py-14"><div className="flex flex-wrap items-end justify-between gap-5"><div><span className="text-sm font-black tracking-[.18em] text-[#ff5b4d]">FOOD MEMORY</span><h1 className="mt-2 text-5xl font-black tracking-[-.06em] md:text-7xl">ยิ่งกิน ยิ่งรู้ใจ</h1><p className="mt-2 font-semibold text-black/45">{count} มื้อที่บันทึกไว้ · {profile.name || "โปรไฟล์ของคุณ"}</p></div><div className="rounded-full bg-[#17151c] px-5 py-3 text-sm font-black text-white">FOOD MEMORY</div></div>{error && <p role="alert" className="mt-5 rounded-2xl bg-[#fff0ef] p-4 text-sm font-bold text-[#d43d32]">{error}</p>}{loading ? <p className="mt-8 rounded-3xl bg-white p-8 text-center font-semibold text-black/50">กำลังโหลดข้อมูลจากฐานข้อมูล…</p> : items.length ? <div className="mt-8 grid gap-5 md:grid-cols-3">{items.map((item) => <article key={item._id} className="overflow-hidden rounded-[28px] bg-white p-3 shadow-[0_20px_50px_rgba(30,24,20,.08)]"><div className="h-52 overflow-hidden rounded-[20px]"><img src={item.image || "/food-noodles.jpg"} alt={item.menuName} className="h-full w-full object-cover"/></div><div className="p-3"><h2 className="text-xl font-black">{item.menuName}</h2><p className="mt-1 text-sm font-semibold text-black/45">{item.storeName} · {new Date(item.savedAt).toLocaleString("th-TH")}</p><div className="mt-4 flex items-center justify-between"><b>฿{item.price}</b><button type="button" onClick={() => void removeItem(item)} disabled={deletingId === item._id} aria-label={`ลบ ${item.menuName} จาก Food Memory`} className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-bold text-[#d43d32] transition hover:bg-[#fff0ef] disabled:cursor-wait disabled:opacity-50"><Trash2 className="size-4" />{deletingId === item._id ? "กำลังลบ…" : "ลบ"}</button></div></div></article>)}</div> : <p className="mt-8 rounded-3xl bg-white p-8 text-center font-semibold text-black/50">ยังไม่มีมื้อที่บันทึก เลือกเมนูที่ชอบจากหน้า Match เพื่อเพิ่มลง Food Memory</p>}</section>;
 }
 
+function BudgetPage({ profile, clientId, refreshKey }: { profile: Profile; clientId: string; refreshKey: number }) {
+  const [summary, setSummary] = useState<BudgetSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [refresh, setRefresh] = useState(0);
+  useEffect(() => {
+    if (!clientId) return;
+    let active = true;
+    setLoading(true);
+    setError("");
+    fetch(`/api/food/budget?clientId=${encodeURIComponent(clientId)}`, { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("โหลดข้อมูลงบไม่สำเร็จ");
+        return response.json() as Promise<BudgetSummary>;
+      })
+      .then((result) => { if (active) setSummary(result); })
+      .catch((loadError) => { if (active) setError(loadError instanceof Error ? loadError.message : "โหลดข้อมูลงบไม่สำเร็จ"); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [clientId, refresh, refreshKey]);
+
+  const totalSpentMonth = summary?.totalSpentMonth ?? 0;
+  const totalSpentToday = summary?.totalSpentToday ?? 0;
+  const daysRemaining = summary?.daysRemaining ?? 1;
+  const monthlyRemaining = Math.max(0, profile.monthlyBudget - totalSpentMonth);
+  const plannedDailyLimit = Math.min(profile.dailyBudget, Math.floor(monthlyRemaining / daysRemaining));
+  const availableToday = Math.max(0, plannedDailyLimit - totalSpentToday);
+  const spentPercent = profile.monthlyBudget > 0 ? Math.min(100, Math.round((totalSpentMonth / profile.monthlyBudget) * 100)) : 0;
+  const monthLabel = new Intl.DateTimeFormat("th-TH", { month: "long", year: "numeric", timeZone: "Asia/Bangkok" }).format(new Date());
+
+  return <section className="mx-auto w-full max-w-5xl px-5 pb-12 pt-8 md:px-10 md:py-12">
+    <div className="flex flex-wrap items-end justify-between gap-4"><div><div className="text-sm font-black tracking-[.18em] text-[#ff5b4d]">SMART BUDGET</div><h1 className="mt-2 text-4xl font-black tracking-[-.05em] md:text-6xl">งบวันนี้และเดือนนี้</h1><p className="mt-2 font-semibold text-black/50">คำนวณจากมื้อที่คุณยืนยันเลือก · {monthLabel}</p></div><CalendarDays className="size-11 text-[#ff5b4d]" /></div>
+    {error && <div role="alert" className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-[#fff0ef] p-4 text-sm font-bold text-[#d43d32]"><span>{error} โปรดลองโหลดใหม่</span><button type="button" onClick={() => setRefresh((value) => value + 1)} className="rounded-full bg-white px-4 py-2">ลองอีกครั้ง</button></div>}
+    <div className="mt-8 grid gap-5 md:grid-cols-[1.1fr_.9fr]">
+      <article className="rounded-[32px] bg-[#d7ff52] p-7 md:p-9"><div className="flex items-center justify-between"><span className="font-black">งบอาหารเดือนนี้</span><WalletCards /></div><p className="mt-7 text-sm font-bold">งบคงเหลือ</p><div className="mt-1 text-6xl font-black tracking-[-.07em] md:text-7xl">{loading ? "—" : `฿${monthlyRemaining.toLocaleString()}`}</div><div className="mt-7 flex justify-between text-sm font-black"><span>ใช้ไป ฿{totalSpentMonth.toLocaleString()}</span><span>งบ ฿{profile.monthlyBudget.toLocaleString()}</span></div><div className="mt-3 h-3 overflow-hidden rounded-full bg-black/10"><div className="h-full rounded-full bg-[#17151c] transition-all" style={{ width: `${spentPercent}%` }} /></div><p className="mt-2 text-right text-xs font-bold">ใช้ไป {spentPercent}%</p></article>
+      <article className="rounded-[32px] bg-[#ff5b4d] p-7 text-white md:p-9"><Sparkles className="size-8" /><p className="mt-6 text-sm font-bold text-white/75">วันนี้ใช้ได้อีก</p><div className="mt-1 text-6xl font-black tracking-[-.07em]">{loading ? "—" : `฿${availableToday.toLocaleString()}`}</div><p className="mt-4 font-semibold text-white/80">งบวันนี้ถูกจำกัดด้วยงบรายวัน ฿{profile.dailyBudget.toLocaleString()} และงบเดือนที่เหลือ เฉลี่ย {daysRemaining} วันที่เหลือ (รวมวันนี้)</p><div className="mt-6 rounded-2xl bg-white/15 p-4"><div className="flex justify-between text-sm font-bold text-white/75"><span>วันนี้ใช้ไป</span><span>฿{totalSpentToday.toLocaleString()}</span></div><div className="mt-2 flex justify-between font-black"><span>เพดานวันนี้</span><span>฿{plannedDailyLimit.toLocaleString()}</span></div></div></article>
+    </div>
+    <div className="mt-8"><div className="flex items-end justify-between gap-3"><div><h2 className="text-2xl font-black">รายการที่เลือกเดือนนี้</h2><p className="mt-1 text-sm font-semibold text-black/45">ใช้ยอดราคาเมนูจากฐานข้อมูล · บันทึกเมื่อกดยืนยันเลือกมื้อ</p></div><button type="button" onClick={() => setRefresh((value) => value + 1)} className="rounded-full bg-white px-4 py-2 text-sm font-black">รีเฟรช</button></div>
+      {loading ? <p className="mt-4 rounded-2xl bg-white p-5 font-semibold text-black/50">กำลังโหลดประวัติรายจ่าย…</p> : summary?.transactions.length ? <div className="mt-4 divide-y divide-black/5 rounded-[24px] bg-white px-5">{summary.transactions.map((transaction) => <div key={transaction._id} className="flex flex-wrap items-center justify-between gap-2 py-4"><div><b className="block">{transaction.menuName}</b><span className="text-sm font-semibold text-black/45">{transaction.storeName} · {new Date(transaction.createdAt).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Bangkok" })}</span></div><b className="text-[#ff5b4d]">−฿{transaction.amount.toLocaleString()}</b></div>)}</div> : <p className="mt-4 rounded-2xl bg-white p-5 font-semibold text-black/50">ยังไม่มีรายการใช้จ่ายเดือนนี้ เมื่อยืนยันเลือกเมนู ระบบจะบันทึกราคาให้โดยอัตโนมัติ</p>}
+    </div>
+  </section>;
+}
+
 export default function Home() {
-  const [screen, setScreen] = useState<Screen>("home"); const [profile, setProfile] = useState<Profile>(emptyProfile); const [profileOpen, setProfileOpen] = useState(false); const [toast, setToast] = useState(""); const [clientId, setClientId] = useState("");
+  const [screen, setScreen] = useState<Screen>("home"); const [profile, setProfile] = useState<Profile>(emptyProfile); const [profileOpen, setProfileOpen] = useState(false); const [toast, setToast] = useState(""); const [clientId, setClientId] = useState(""); const [budgetRefreshKey, setBudgetRefreshKey] = useState(0);
   useEffect(() => {
     let active = true;
     let id = localStorage.getItem("food-match-client-id");
@@ -696,8 +751,19 @@ export default function Home() {
       .then(() => setToast("บันทึกความชอบลงฐานข้อมูลแล้ว"))
       .catch(() => setToast("บันทึกไว้ในอุปกรณ์แล้ว แต่เชื่อมต่อฐานข้อมูลไม่สำเร็จ"));
   };
-  const addMeal = (meal: Scenario) => { void saveFoodMemory(clientId, meal.id).then(() => setToast(`บันทึก ${meal.name} ลง Food Memory แล้ว`)).catch(() => setToast(`เลือก ${meal.name} แล้ว แต่บันทึก Food Memory ไม่สำเร็จ`)); navigate("memory"); };
-  return <main className="min-h-dvh bg-[#f6f4ee] text-[#17151c]"><Header screen={screen} onNavigate={navigate} onProfile={() => setProfileOpen(true)} />{screen === "home" && <HomePage go={navigate} profile={profile} clientId={clientId} />}{screen === "eat" && <EatPage profile={profile} needProfile={() => setProfileOpen(true)} clientId={clientId} addMeal={addMeal} />}{screen === "cook" && <CookPage profile={profile} needProfile={() => setProfileOpen(true)} clientId={clientId} />}{screen === "memory" && <MemoryPage profile={profile} clientId={clientId} />}<footer className="border-t border-black/[.06] px-5 py-8 md:px-10"><div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4"><Logo onClick={() => navigate("home")} /><p className="text-sm font-semibold text-black/40">Demo · โรงอาหารคณะวิศวกรรมศาสตร์ ลาดกระบัง</p><button onClick={() => setProfileOpen(true)} className="rounded-full bg-white px-4 py-2 text-sm font-black">{greeting}</button></div></footer><ProfileDrawer open={profileOpen} value={profile} onClose={() => setProfileOpen(false)} onSave={saveProfile} />{toast && <div className="fixed left-1/2 top-24 z-[60] flex -translate-x-1/2 items-center gap-2 rounded-full bg-[#17151c] px-5 py-3 text-sm font-black text-white shadow-xl"><Check className="size-5 text-[#d7ff52]" />{toast}</div>}</main>;
+  const addMeal = (meal: Scenario) => {
+    const transactionId = crypto.randomUUID();
+    navigate("budget");
+    void Promise.allSettled([recordFoodExpense(clientId, meal.id, transactionId), saveFoodMemory(clientId, meal.id)])
+      .then(([expenseResult, memoryResult]) => {
+        if (expenseResult.status === "fulfilled") {
+          setBudgetRefreshKey((value) => value + 1);
+          setToast(memoryResult.status === "fulfilled" ? `บันทึก ${meal.name} เป็นรายจ่ายและ Food Memory แล้ว` : `บันทึกรายจ่าย ${meal.name} แล้ว แต่ Food Memory บันทึกไม่สำเร็จ`);
+        }
+        else setToast(`บันทึก ${meal.name} เป็นรายจ่ายไม่สำเร็จ กรุณาตรวจการเชื่อมต่อ`);
+      });
+  };
+  return <main className="min-h-dvh bg-[#f6f4ee] text-[#17151c]"><Header screen={screen} onNavigate={navigate} onProfile={() => setProfileOpen(true)} />{screen === "home" && <HomePage go={navigate} profile={profile} clientId={clientId} />}{screen === "eat" && <EatPage profile={profile} needProfile={() => setProfileOpen(true)} clientId={clientId} addMeal={addMeal} />}{screen === "cook" && <CookPage profile={profile} needProfile={() => setProfileOpen(true)} clientId={clientId} />}{screen === "memory" && <MemoryPage profile={profile} clientId={clientId} />}{screen === "budget" && <BudgetPage profile={profile} clientId={clientId} refreshKey={budgetRefreshKey} />}<footer className="border-t border-black/[.06] px-5 py-8 md:px-10"><div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4"><Logo onClick={() => navigate("home")} /><p className="text-sm font-semibold text-black/40">Demo · โรงอาหารคณะวิศวกรรมศาสตร์ ลาดกระบัง</p><button onClick={() => setProfileOpen(true)} className="rounded-full bg-white px-4 py-2 text-sm font-black">{greeting}</button></div></footer><ProfileDrawer open={profileOpen} value={profile} onClose={() => setProfileOpen(false)} onSave={saveProfile} />{toast && <div className="fixed left-1/2 top-24 z-[60] flex -translate-x-1/2 items-center gap-2 rounded-full bg-[#17151c] px-5 py-3 text-sm font-black text-white shadow-xl"><Check className="size-5 text-[#d7ff52]" />{toast}</div>}</main>;
 }
 /*
 function SwipeDeck({ items, onPicked, onNextBatch }: { items: Scenario[]; onPicked: (s: Scenario) => void; onNextBatch: () => void }) {

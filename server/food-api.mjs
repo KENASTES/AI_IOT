@@ -19,6 +19,7 @@ const allergyAliases = {
 let mongoClient;
 let mongoClientPromise;
 let recommendationFeedbackIndexPromise;
+let budgetTransactionIndexPromise;
 
 async function getStoreCollection() {
   const uri = process.env.MONGODB_URI;
@@ -106,7 +107,7 @@ async function saveMemory(clientId, menuId) {
     projection: { Store_Name: 1, Location: 1, Menu: 1 },
   });
   const menu = store?.Menu?.[Number(indexText)];
-  if (!menu || typeof menu.Menu_Name !== "string" || typeof menu.Price_THB !== "number" || menu.Blacklist === true) {
+  if (!menu || typeof menu.Menu_Name !== "string" || !Number.isFinite(menu.Price_THB) || menu.Price_THB < 0 || menu.Blacklist === true) {
     throw new Error("Menu not found or unavailable");
   }
   const record = {
@@ -123,6 +124,87 @@ async function saveMemory(clientId, menuId) {
   };
   const result = await (await getDatabase()).collection("food_memories").insertOne(record);
   return { ...record, _id: result.insertedId };
+}
+
+async function getBudgetTransactionCollection() {
+  const collection = (await getDatabase()).collection("food_budget_transactions");
+  if (!budgetTransactionIndexPromise) {
+    budgetTransactionIndexPromise = collection.createIndex(
+      { clientId: 1, transactionId: 1 },
+      { unique: true, name: "unique_food_budget_transaction" },
+    ).catch((error) => {
+      budgetTransactionIndexPromise = undefined;
+      throw error;
+    });
+  }
+  await budgetTransactionIndexPromise;
+  return collection;
+}
+
+async function saveBudgetTransaction(clientId, menuId, transactionId) {
+  if (!validClientId(clientId) || typeof menuId !== "string") throw new Error("A valid clientId and menuId are required");
+  if (typeof transactionId !== "string" || !/^[a-f0-9-]{36}$/iu.test(transactionId)) throw new Error("Invalid transactionId");
+  const collection = await getBudgetTransactionCollection();
+  const existing = await collection.findOne({ clientId, transactionId });
+  if (existing) return existing;
+  const [storeId, indexText] = menuId.split(":");
+  if (!ObjectId.isValid(storeId) || !/^\d{1,4}$/u.test(indexText || "")) throw new Error("Invalid menuId");
+  const store = await (await getStoreCollection()).findOne({ _id: new ObjectId(storeId), Is_Active: { $ne: false } }, {
+    projection: { Store_Name: 1, Menu: 1 },
+  });
+  const menu = store?.Menu?.[Number(indexText)];
+  if (!menu || typeof menu.Menu_Name !== "string" || !Number.isFinite(menu.Price_THB) || menu.Price_THB < 0 || menu.Blacklist === true) {
+    throw new Error("Menu not found or unavailable");
+  }
+  const transaction = {
+    clientId,
+    transactionId,
+    menuId,
+    menuName: menu.Menu_Name,
+    storeName: store.Store_Name || "ร้านอาหาร",
+    amount: menu.Price_THB,
+    createdAt: new Date(),
+  };
+  try {
+    const result = await collection.insertOne(transaction);
+    return { ...transaction, _id: result.insertedId };
+  } catch (error) {
+    if (error?.code !== 11000) throw error;
+    return collection.findOne({ clientId, transactionId });
+  }
+}
+
+function bangkokDateBoundaries(now = new Date()) {
+  const offset = 7 * 60 * 60 * 1000;
+  const local = new Date(now.getTime() + offset);
+  const year = local.getUTCFullYear();
+  const month = local.getUTCMonth();
+  const day = local.getUTCDate();
+  return {
+    monthStart: new Date(Date.UTC(year, month, 1) - offset),
+    todayStart: new Date(Date.UTC(year, month, day) - offset),
+    tomorrowStart: new Date(Date.UTC(year, month, day + 1) - offset),
+    daysRemaining: new Date(Date.UTC(year, month + 1, 0)).getUTCDate() - day + 1,
+  };
+}
+
+async function getBudgetSummary(clientId) {
+  if (!validClientId(clientId)) throw new Error("A valid clientId is required");
+  const { monthStart, todayStart, tomorrowStart, daysRemaining } = bangkokDateBoundaries();
+  const collection = await getBudgetTransactionCollection();
+  const [totals, transactions] = await Promise.all([
+    collection.aggregate([
+      { $match: { clientId, createdAt: { $gte: monthStart, $lt: tomorrowStart } } },
+      { $group: {
+        _id: null,
+        totalSpentMonth: { $sum: "$amount" },
+        totalSpentToday: { $sum: { $cond: [{ $gte: ["$createdAt", todayStart] }, "$amount", 0] } },
+      } },
+    ]).toArray(),
+    collection.find({ clientId, createdAt: { $gte: monthStart, $lt: tomorrowStart } })
+      .sort({ createdAt: -1 }).limit(10).toArray(),
+  ]);
+  return { totalSpentMonth: totals[0]?.totalSpentMonth || 0, totalSpentToday: totals[0]?.totalSpentToday || 0, daysRemaining, transactions };
 }
 
 async function getRecommendationFeedbackCollection() {
@@ -381,6 +463,30 @@ const server = createServer(async (request, response) => {
     } catch (error) {
       console.error("MongoDB profile save failed:", error.message);
       sendJson(response, 400, { error: error.message || "Could not save user profile" });
+    }
+    return;
+  }
+  if (request.method === "GET" && url.pathname === "/api/food/budget") {
+    try {
+      sendJson(response, 200, await getBudgetSummary(url.searchParams.get("clientId")));
+    } catch (error) {
+      console.error("MongoDB budget lookup failed:", error.message);
+      sendJson(response, 503, { error: "Could not load food budget" });
+    }
+    return;
+  }
+  if (request.method === "POST" && url.pathname === "/api/food/budget") {
+    let payload;
+    try { payload = await readJson(request); } catch {
+      sendJson(response, 400, { error: "Request body must be valid JSON and no larger than 64 KB" });
+      return;
+    }
+    try {
+      const transaction = await saveBudgetTransaction(payload?.clientId, payload?.menuId, payload?.transactionId);
+      sendJson(response, 201, { transaction });
+    } catch (error) {
+      console.error("MongoDB budget transaction save failed:", error.message);
+      sendJson(response, 400, { error: error.message || "Could not record food expense" });
     }
     return;
   }
