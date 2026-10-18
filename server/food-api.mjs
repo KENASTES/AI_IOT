@@ -154,17 +154,28 @@ async function saveRecommendationFeedback(payload) {
 }
 
 async function getRecommendationFeedbackStats() {
-  const [stats] = await (await getRecommendationFeedbackCollection()).aggregate([
-    { $match: { provider: "gemini" } },
+  const grouped = await (await getRecommendationFeedbackCollection()).aggregate([
     { $group: {
-      _id: null,
+      _id: "$provider",
       total: { $sum: 1 },
       accepted: { $sum: { $cond: ["$accepted", 1, 0] } },
     } },
   ]).toArray();
-  const total = stats?.total || 0;
-  const accepted = stats?.accepted || 0;
-  return { total, accepted, acceptanceRate: total ? Math.round((accepted / total) * 100) : null };
+  const byProvider = Object.fromEntries(grouped.map(({ _id, total, accepted }) => [
+    _id,
+    { total, accepted, acceptanceRate: total ? Math.round((accepted / total) * 100) : null },
+  ]));
+  const gemini = byProvider.gemini || { total: 0, accepted: 0, acceptanceRate: null };
+  const database = byProvider.database || { total: 0, accepted: 0, acceptanceRate: null };
+  const total = gemini.total + database.total;
+  const accepted = gemini.accepted + database.accepted;
+  return {
+    total,
+    accepted,
+    acceptanceRate: total ? Math.round((accepted / total) * 100) : null,
+    gemini,
+    database,
+  };
 }
 
 function sanitizeProfile(profile) {

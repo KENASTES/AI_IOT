@@ -25,7 +25,8 @@ type Scenario = {
   recommendationBatchId?: string;
   recommendationProvider?: "gemini" | "database";
 };
-type AiFeedbackStats = { total: number; accepted: number; acceptanceRate: number | null };
+type AiFeedbackProviderStats = { total: number; accepted: number; acceptanceRate: number | null };
+type AiFeedbackStats = AiFeedbackProviderStats & { gemini: AiFeedbackProviderStats; database: AiFeedbackProviderStats };
 type LiveStats = { storeCount: number; menuCount: number; memoryCount: number };
 type MemoryItem = { _id: string; menuName: string; storeName: string; price: number; image: string; savedAt: string };
 
@@ -513,7 +514,7 @@ function EatPage({ profile, needProfile, clientId, addMeal }: { profile: Profile
   const [loading, setLoading] = useState(false);
   const [aiFeedbackStats, setAiFeedbackStats] = useState<AiFeedbackStats | null>(null);
   const [feedbackError, setFeedbackError] = useState("");
-  const recentStorageKey = `forkast-food-recent-menu-ids:${clientId || "anonymous"}`;
+  const recentMenuIdsRef = useRef<string[]>([]);
 
   useEffect(() => {
     if (phase !== "result") return;
@@ -537,11 +538,7 @@ function EatPage({ profile, needProfile, clientId, addMeal }: { profile: Profile
     setLoading(true);
     setStatus("กำลังจับคู่เมนูให้คุณ…");
     try {
-      let recentIds: string[] = [];
-      try {
-        const saved: unknown = JSON.parse(localStorage.getItem(recentStorageKey) || localStorage.getItem("forkast-food-recent-menu-ids") || "[]");
-        if (Array.isArray(saved)) recentIds = saved.filter((id): id is string => typeof id === "string").slice(0, 500);
-      } catch { /* Ignore corrupted local history. */ }
+      const recentIds = [...recentMenuIdsRef.current];
       const [budgetAnswer, time, hunger, mood, goal] = nextAnswers;
       const query = [...nextAnswers, profile.dislikes ? `ไม่กิน: ${profile.dislikes}` : "", profile.conditions ? `ข้อจำกัดสุขภาพ: ${profile.conditions}` : ""].filter(Boolean).join("; ");
       const result = await rankFilteredFoods(query, {
@@ -562,16 +559,15 @@ function EatPage({ profile, needProfile, clientId, addMeal }: { profile: Profile
         recommendationProvider,
       }));
       setItems(recommendations);
-      const updated = [...recommendations.map((item) => item.id), ...recentIds.filter((id) => !recommendations.some((item) => item.id === id))].slice(0, 500);
-      try { localStorage.setItem(recentStorageKey, JSON.stringify(updated)); } catch { /* Recommendations still work without local history. */ }
-      setStatus(result.message || result.explanation?.message || `จัดอันดับ ${recommendations.length} เมนูจากฐานข้อมูล`);
+      recentMenuIdsRef.current = [...recommendations.map((item) => item.id), ...recentIds.filter((id) => !recommendations.some((item) => item.id === id))].slice(0, 500);
+      setStatus([result.explanation?.message, result.message].filter(Boolean).join(" · ") || `จัดอันดับ ${recommendations.length} เมนูจากฐานข้อมูล`);
     } catch (error) {
       setItems([]);
       setStatus(error instanceof Error ? error.message : "ค้นเมนูจากฐานข้อมูลไม่สำเร็จ");
     } finally { setLoading(false); }
   };
 
-  const start = () => profile.name ? setPhase("quiz") : needProfile();
+  const start = () => { recentMenuIdsRef.current = []; setPhase(profile.name ? "quiz" : "intro"); if (!profile.name) needProfile(); };
   const choose = (option: string) => {
     const next = [...answers.slice(0, step), option];
     setAnswers(next);
@@ -579,7 +575,7 @@ function EatPage({ profile, needProfile, clientId, addMeal }: { profile: Profile
     else setStep((value) => value + 1);
   };
   if (phase === "quiz") return <section className="mx-auto min-h-[calc(100dvh-76px)] max-w-3xl px-5 py-10"><button onClick={() => setPhase("intro")} className="flex items-center gap-2 text-sm font-black text-black/45"><ArrowLeft className="size-4" />กลับ</button><div className="mt-8 flex gap-2">{quiz.map((_, i) => <span key={i} className={`h-2 flex-1 rounded-full ${i <= step ? "bg-[#ff5b4d]" : "bg-black/10"}`} />)}</div><div className="mt-7 rounded-[38px] bg-[#17151c] p-7 text-white shadow-2xl md:p-11"><span className="text-sm font-black tracking-[.18em] text-[#d7ff52]">{quiz[step].kicker}</span><h1 className="mt-4 text-4xl font-black tracking-[-.05em] md:text-6xl">{quiz[step].title}</h1><div className="mt-9 grid gap-3">{quiz[step].options.map((option, i) => <button key={option} onClick={() => choose(option)} className="flex min-h-16 items-center justify-between rounded-2xl border border-white/10 bg-white/[.06] px-5 text-left text-lg font-black transition hover:bg-[#ff5b4d]"><span>{option}</span><span className="grid size-8 place-items-center rounded-full bg-white/10 text-sm">{i + 1}</span></button>)}</div></div></section>;
-  if (phase === "result") return <section className="mx-auto grid max-w-7xl gap-10 px-5 py-10 lg:grid-cols-[.7fr_1.3fr] lg:px-10"><div><span className="text-sm font-black tracking-[.18em] text-[#ff5b4d]">FOOD SCENARIOS</span><h1 className="mt-3 text-5xl font-black leading-[.92] tracking-[-.06em] md:text-7xl">เลือกด้วย<br />ความรู้สึก.<br /><span className="text-[#ff5b4d]">มั่นใจด้วย AI.</span></h1><div className="mt-7 rounded-[26px] bg-white p-5 shadow-sm"><b>เกณฑ์ที่ใช้จัดอันดับ</b><p className="mt-2 text-sm font-semibold leading-6 text-black/50">{status}</p><ScoreBreakdownList items={items} /><div className="mt-4 rounded-2xl bg-[#f6f4ee] p-4"><div className="flex items-baseline justify-between gap-3"><b className="text-sm">อัตราที่ผู้ใช้ยอมรับคำแนะนำ AI</b><b className="text-xl">{aiFeedbackStats?.acceptanceRate == null ? "—" : `${aiFeedbackStats.acceptanceRate}%`}</b></div><p className="mt-1 text-xs font-semibold leading-5 text-black/50">{aiFeedbackStats ? `ชอบ ${aiFeedbackStats.accepted} จาก ${aiFeedbackStats.total} ผลตอบรับที่บันทึก · นับเฉพาะเมนูที่ Gemini เลือก` : "กำลังโหลดข้อมูล feedback จากฐานข้อมูล…"}</p><p className="mt-2 text-[11px] font-semibold leading-4 text-black/40">เป็นอัตราการยอมรับจากการปัด/เลือกของผู้ใช้ ไม่ใช่ความแม่นยำเชิงวิทยาศาสตร์ของ AI</p>{feedbackError && <p className="mt-2 text-xs font-bold text-[#d43d32]">{feedbackError}</p>}</div></div><button onClick={() => { setStep(0); setAnswers([]); setPhase("quiz"); }} className="mt-5 flex items-center gap-2 text-sm font-black text-black/45"><RotateCcw className="size-4" />ตอบใหม่อีกครั้ง</button></div><SwipeDeck items={items} loading={loading} onPicked={addMeal} onFeedback={(scenario, accepted) => { void recordFeedback(scenario, accepted); }} onNextBatch={() => { setItems([]); void requestRecommendations(answers); }} /></section>;
+  if (phase === "result") return <section className="mx-auto grid max-w-7xl gap-10 px-5 py-10 lg:grid-cols-[.7fr_1.3fr] lg:px-10"><div><span className="text-sm font-black tracking-[.18em] text-[#ff5b4d]">FOOD SCENARIOS</span><h1 className="mt-3 text-5xl font-black leading-[.92] tracking-[-.06em] md:text-7xl">เลือกด้วย<br />ความรู้สึก.<br /><span className="text-[#ff5b4d]">มั่นใจด้วย AI.</span></h1><div className="mt-7 rounded-[26px] bg-white p-5 shadow-sm"><b>เกณฑ์ที่ใช้จัดอันดับ</b><p className="mt-2 text-sm font-semibold leading-6 text-black/50">{status}</p><ScoreBreakdownList items={items} /><div className="mt-4 rounded-2xl bg-[#f6f4ee] p-4"><div className="flex items-baseline justify-between gap-3"><b className="text-sm">อัตราที่ผู้ใช้ยอมรับคำแนะนำ</b><b className="text-xl">{aiFeedbackStats?.acceptanceRate == null ? "—" : `${aiFeedbackStats.acceptanceRate}%`}</b></div><p className="mt-1 text-xs font-semibold leading-5 text-black/50">{aiFeedbackStats ? `ชอบ ${aiFeedbackStats.accepted} จาก ${aiFeedbackStats.total} ผลตอบรับที่บันทึก` : "กำลังโหลดข้อมูล feedback จากฐานข้อมูล…"}</p><p className="mt-2 text-xs font-semibold leading-5 text-black/50">Gemini เลือก: {aiFeedbackStats?.gemini.accepted ?? 0}/{aiFeedbackStats?.gemini.total ?? 0} · ระบบฐานข้อมูลเลือก: {aiFeedbackStats?.database.accepted ?? 0}/{aiFeedbackStats?.database.total ?? 0}</p><p className="mt-2 text-[11px] font-semibold leading-4 text-black/40">อัตรานี้คำนวณจากการปัดทิ้งหรือยืนยันเลือกเมนู เป็น feedback ของผู้ใช้ ไม่ใช่ความแม่นยำเชิงวิทยาศาสตร์ของ AI</p>{feedbackError && <p className="mt-2 text-xs font-bold text-[#d43d32]">{feedbackError}</p>}</div></div><button onClick={() => { recentMenuIdsRef.current = []; setStep(0); setAnswers([]); setItems([]); setPhase("quiz"); }} className="mt-5 flex items-center gap-2 text-sm font-black text-black/45"><RotateCcw className="size-4" />ตอบใหม่อีกครั้ง</button></div><SwipeDeck items={items} loading={loading} onPicked={addMeal} onFeedback={(scenario, accepted) => { void recordFeedback(scenario, accepted); }} onNextBatch={() => { setItems([]); void requestRecommendations(answers); }} /></section>;
   return <section className="mx-auto grid max-w-7xl gap-10 px-5 py-12 lg:grid-cols-[.9fr_1.1fr] lg:items-center lg:px-10 lg:py-20"><div><span className="inline-flex items-center gap-2 rounded-full bg-[#ff5b4d]/10 px-4 py-2 text-sm font-black text-[#ff5b4d]"><Zap className="size-4 fill-current" /> SWIPE 5 วินาที</span><h1 className="mt-6 text-5xl font-black leading-[.9] tracking-[-.06em] md:text-8xl">ออกไปกิน<br /><span className="text-[#ff5b4d]">อะไรดี?</span></h1><p className="mt-6 max-w-xl text-lg font-semibold leading-8 text-black/55">ตอบแค่เรื่องมื้อนี้: งบ เวลา ความหิว และมู้ด ส่วนข้อมูลสุขภาพและอาหารที่ไม่กิน เราดึงจากโปรไฟล์ให้อัตโนมัติ</p><Button onClick={start} className="mt-8 h-14 rounded-full bg-[#17151c] px-8 text-base font-black text-white hover:bg-black">เริ่มหา Food Match <ArrowRight className="ml-2" /></Button></div><div className="relative min-h-[560px]"><div className="absolute right-6 top-0 h-[500px] w-[76%] rotate-3 overflow-hidden rounded-[42px] bg-[#17151c] p-3 shadow-2xl"><img src="/food-ramen.jpg" alt="อาหารแนะนำ" className="h-full w-full rounded-[32px] object-cover" /></div><div className="absolute bottom-0 left-0 w-[260px] -rotate-6 rounded-[28px] bg-[#d7ff52] p-6 shadow-xl"><b className="text-4xl tracking-[-.06em]">ข้อมูลร้านและเมนู</b><span className="mt-1 block font-black">เมนูจากร้านจริง</span><p className="mt-3 text-sm font-bold text-black/50">AI จัดอันดับตามคำตอบและโปรไฟล์</p></div></div></section>;
 }
 
