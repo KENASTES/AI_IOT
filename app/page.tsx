@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft, ArrowRight, BadgeCheck, BookHeart, Check, ChefHat, Flame,
-  Heart, MapPin, Menu, Navigation, Plus, RotateCcw, Save, Sparkles, Star,
+  Heart, MapPin, Menu, Navigation, Plus, RotateCcw, Save, Sparkles, Star, Trash2,
   UserRound, WalletCards, X, Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -60,6 +60,18 @@ async function saveFoodMemory(clientId: string, menuId: string): Promise<void> {
     body: JSON.stringify({ clientId, menuId }),
   });
   if (!response.ok) throw new Error("บันทึก Food Memory ไม่สำเร็จ");
+}
+
+async function deleteFoodMemory(clientId: string, memoryId: string): Promise<void> {
+  const response = await fetch("/api/food/memory", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ clientId, memoryId }),
+  });
+  if (!response.ok) {
+    const result = await response.json().catch(() => ({})) as { error?: string };
+    throw new Error(result.error || "ลบ Food Memory ไม่สำเร็จ");
+  }
 }
 
 async function fetchAiFeedbackStats(): Promise<AiFeedbackStats> {
@@ -685,6 +697,8 @@ function Memory({ clientId }: { clientId: string }) {
   const [items, setItems] = useState<MemoryItem[]>([]);
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [error, setError] = useState("");
   useEffect(() => {
     if (!clientId) return;
     fetch(`/api/food/memory?clientId=${encodeURIComponent(clientId)}`, { cache: "no-store" })
@@ -693,8 +707,23 @@ function Memory({ clientId }: { clientId: string }) {
       .catch(() => { setItems([]); setCount(0); })
       .finally(() => setLoading(false));
   }, [clientId]);
+  const removeItem = async (item: MemoryItem) => {
+    if (!window.confirm(`ลบ “${item.menuName}” ออกจาก Food Memory ใช่ไหม?`)) return;
+    setDeletingId(item._id);
+    setError("");
+    try {
+      await deleteFoodMemory(clientId, item._id);
+      setItems((current) => current.filter((saved) => saved._id !== item._id));
+      setCount((current) => Math.max(0, current - 1));
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "ลบ Food Memory ไม่สำเร็จ ลองอีกครั้ง");
+    } finally {
+      setDeletingId(null);
+    }
+  };
   return <section className="mx-auto w-full max-w-5xl px-5 pb-32 pt-8 md:px-10"><div className="flex items-end justify-between gap-4"><div><div className="text-sm font-black tracking-[.18em] text-[#ff5b4d]">FOOD MEMORY</div><h1 className="mt-2 text-4xl font-black tracking-[-.05em] md:text-6xl">ยิ่งกิน ยิ่งรู้ใจ</h1><p className="mt-2 font-semibold text-black/45">บันทึกแล้ว {count} มื้อ · แสดงล่าสุดไม่เกิน 30 รายการ</p></div><BookHeart className="size-12 text-[#ff5b4d]" /></div>
-    {loading ? <p className="mt-8 rounded-3xl bg-white p-8 text-center font-semibold text-black/50">กำลังโหลดประวัติมื้ออาหาร…</p> : items.length ? <div className="mt-8 grid gap-4 md:grid-cols-3">{items.map((item, i) => <article key={item._id} className="group overflow-hidden rounded-[28px] bg-white p-3 shadow-[0_20px_50px_rgba(30,24,20,.08)]"><div className="relative h-52 overflow-hidden rounded-[20px]"><img src={item.image || "/food-noodles.jpg"} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-105"/><span className="absolute right-3 top-3 rounded-full bg-white px-3 py-1 text-sm font-black">{i === 0 ? "ล่าสุด" : "บันทึกแล้ว"}</span></div><div className="p-3"><h2 className="text-xl font-black">{item.menuName}</h2><p className="mt-1 text-sm font-semibold text-black/45">{item.storeName} · {new Date(item.savedAt).toLocaleString("th-TH")}</p><div className="mt-4 flex items-center justify-between"><b>฿{item.price}</b><Heart className="size-5 fill-[#ff5b4d] text-[#ff5b4d]" /></div></div></article>)}</div> : <p className="mt-8 rounded-3xl bg-white p-8 text-center font-semibold text-black/50">ยังไม่มีมื้อที่บันทึก เลือกเมนูที่ชอบจากหน้า Match แล้วกด “เลือกมื้อนี้” เพื่อเพิ่มลง Food Memory</p>}
+    {error && <p role="alert" className="mt-5 rounded-2xl bg-[#fff0ef] p-4 text-sm font-bold text-[#d43d32]">{error}</p>}
+    {loading ? <p className="mt-8 rounded-3xl bg-white p-8 text-center font-semibold text-black/50">กำลังโหลดประวัติมื้ออาหาร…</p> : items.length ? <div className="mt-8 grid gap-4 md:grid-cols-3">{items.map((item, i) => <article key={item._id} className="group overflow-hidden rounded-[28px] bg-white p-3 shadow-[0_20px_50px_rgba(30,24,20,.08)]"><div className="relative h-52 overflow-hidden rounded-[20px]"><img src={item.image || "/food-noodles.jpg"} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-105"/><span className="absolute right-3 top-3 rounded-full bg-white px-3 py-1 text-sm font-black">{i === 0 ? "ล่าสุด" : "บันทึกแล้ว"}</span></div><div className="p-3"><h2 className="text-xl font-black">{item.menuName}</h2><p className="mt-1 text-sm font-semibold text-black/45">{item.storeName} · {new Date(item.savedAt).toLocaleString("th-TH")}</p><div className="mt-4 flex items-center justify-between"><b>฿{item.price}</b><button type="button" onClick={() => void removeItem(item)} disabled={deletingId === item._id} aria-label={`ลบ ${item.menuName} จาก Food Memory`} className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-bold text-[#d43d32] transition hover:bg-[#fff0ef] disabled:cursor-wait disabled:opacity-50"><Trash2 className="size-4" />{deletingId === item._id ? "กำลังลบ…" : "ลบ"}</button></div></div></article>)}</div> : <p className="mt-8 rounded-3xl bg-white p-8 text-center font-semibold text-black/50">ยังไม่มีมื้อที่บันทึก เลือกเมนูที่ชอบจากหน้า Match แล้วกด “เลือกมื้อนี้” เพื่อเพิ่มลง Food Memory</p>}
     <div className="mt-6 rounded-[28px] bg-[#17151c] p-6 text-white"><div className="flex items-center gap-2 text-[#d7ff52]"><Sparkles className="size-5"/><b>FOOD MEMORY</b></div><p className="mt-2 max-w-2xl text-lg font-bold">รายการนี้บันทึกจากเมนูที่คุณเลือกในอุปกรณ์และโปรไฟล์เบราว์เซอร์นี้</p></div></section>;
 }
 

@@ -89,6 +89,15 @@ async function listMemories(clientId) {
   return { items, count };
 }
 
+async function deleteMemory(clientId, memoryId) {
+  if (!validClientId(clientId)) throw new Error("A valid clientId is required");
+  if (typeof memoryId !== "string" || !/^[a-f0-9]{24}$/iu.test(memoryId)) throw new Error("Invalid memoryId");
+  return (await getDatabase()).collection("food_memories").deleteOne({
+    _id: new ObjectId(memoryId),
+    clientId,
+  });
+}
+
 async function saveMemory(clientId, menuId) {
   if (!validClientId(clientId) || typeof menuId !== "string") throw new Error("A valid clientId and menuId are required");
   const [storeId, indexText] = menuId.split(":");
@@ -407,6 +416,25 @@ const server = createServer(async (request, response) => {
     } catch (error) {
       console.error("MongoDB memory lookup failed:", error.message);
       sendJson(response, 503, { error: "Could not load food memory" });
+    }
+    return;
+  }
+  if (request.method === "DELETE" && url.pathname === "/api/food/memory") {
+    let payload;
+    try { payload = await readJson(request); } catch {
+      sendJson(response, 400, { error: "Request body must be valid JSON and no larger than 64 KB" });
+      return;
+    }
+    try {
+      const result = await deleteMemory(payload?.clientId, payload?.memoryId);
+      if (!result.deletedCount) {
+        sendJson(response, 404, { error: "ไม่พบรายการ Food Memory นี้ในบัญชีของคุณ" });
+        return;
+      }
+      sendJson(response, 200, { deleted: true });
+    } catch (error) {
+      console.error("MongoDB memory delete failed:", error.message);
+      sendJson(response, 400, { error: error.message || "Could not delete food memory" });
     }
     return;
   }
