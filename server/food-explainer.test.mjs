@@ -15,6 +15,7 @@ test("Gemini can select only reason codes supported by MongoDB facts", async () 
       const request = JSON.parse(options.body);
       assert.equal(request.generationConfig.responseFormat.text.mimeType, "application/json");
       assert.equal(request.generationConfig.responseFormat.text.schema.properties.items.type, "array");
+      assert.equal(request.generationConfig.responseFormat.text.schema.properties.items.maxItems, 3);
       assert.equal(request.generationConfig.thinkingConfig.thinkingBudget, 0);
       return {
         ok: true,
@@ -31,6 +32,23 @@ test("Gemini can select only reason codes supported by MongoDB facts", async () 
   assert.match(result.recommendations[0].matchReasons.join(" "), /เป้าหมาย/);
   assert.doesNotMatch(result.recommendations[0].matchReasons.join(" "), /unsupported|Gemini/);
   assert.match(result.recommendations[1].matchReasons.join(" "), /ราคา ฿50/);
+});
+
+test("Gemini returns three recommendations when the database has enough candidates", async () => {
+  const pool = [
+    ...recommendations,
+    { id: "menu-3", menuName: "ข้าวหมู", storeName: "ร้านสาม", score: 86, price: 48, tags: ["filling"], matchReasons: [] },
+  ];
+  const result = await explainRecommendations(pool, preferences, 60, [], {
+    apiKey: "test-key",
+    fetchImpl: async () => ({
+      ok: true,
+      json: async () => ({ candidates: [{ content: { parts: [{ text: JSON.stringify({ items: pool.map(({ id }) => ({ id, reasonCodes: ["budget_fit"] })) }) }] } }] }),
+    }),
+  });
+
+  assert.equal(result.provider, "gemini");
+  assert.equal(result.recommendations.length, 3);
 });
 
 test("missing API key falls back to safe, grounded reasons", async () => {
@@ -99,7 +117,19 @@ test("recently displayed IDs are avoided and the fallback prefers different stor
   assert.notEqual(result.recommendations[0].storeName, result.recommendations[1].storeName);
 });
 
-test("does not repeat recent menus even when fewer than two fresh menus remain", async () => {
+test("fallback can return three menus from different stores when available", async () => {
+  const pool = [
+    ...recommendations,
+    { id: "menu-3", menuName: "ข้าวหมู", storeName: "ร้านสาม", score: 86, price: 48, tags: ["filling"], matchReasons: [] },
+    { id: "menu-4", menuName: "ข้าวปลา", storeName: "ร้านสี่", score: 85, price: 50, tags: ["quick"], matchReasons: [] },
+  ];
+  const result = await explainRecommendations(pool, preferences, 60, [], { apiKey: "", random: () => 0 });
+
+  assert.equal(result.recommendations.length, 3);
+  assert.equal(new Set(result.recommendations.map((item) => item.storeName)).size, 3);
+});
+
+test("does not repeat recent menus even when fewer than three fresh menus remain", async () => {
   const pool = [
     ...recommendations,
     { id: "menu-3", menuName: "ข้าวหมู", storeName: "ร้านสาม", score: 86, price: 48, tags: ["filling"], matchReasons: [] },

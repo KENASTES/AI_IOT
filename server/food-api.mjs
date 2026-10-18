@@ -132,9 +132,11 @@ async function getRecommendationFeedbackCollection() {
 }
 
 async function saveRecommendationFeedback(payload) {
-  const { clientId, batchId, menuId, accepted, provider, score, menuName } = payload || {};
+  const { clientId, batchId, batchLimit, batchSize, menuId, accepted, provider, score, menuName } = payload || {};
   if (!validClientId(clientId)) throw new Error("A valid clientId is required");
   if (typeof batchId !== "string" || !/^[a-f0-9-]{36}$/iu.test(batchId)) throw new Error("Invalid recommendation batch");
+  if (batchLimit !== 3) throw new Error("Invalid recommendation batch limit");
+  if (!Number.isInteger(batchSize) || batchSize < 1 || batchSize > batchLimit) throw new Error("Invalid recommendation batch size");
   const [storeId, indexText] = typeof menuId === "string" ? menuId.split(":") : [];
   if (!ObjectId.isValid(storeId) || !/^\d{1,4}$/u.test(indexText || "")) throw new Error("Invalid menuId");
   if (typeof accepted !== "boolean") throw new Error("Feedback must be positive or negative");
@@ -146,7 +148,7 @@ async function saveRecommendationFeedback(payload) {
   await (await getRecommendationFeedbackCollection()).updateOne(
     { clientId, batchId, menuId },
     {
-      $set: { accepted, provider, score, menuName: menuName.trim(), updatedAt: now },
+      $set: { accepted, provider, score, batchLimit, batchSize, menuName: menuName.trim(), updatedAt: now },
       $setOnInsert: { clientId, batchId, menuId, createdAt: now },
     },
     { upsert: true },
@@ -156,22 +158,33 @@ async function saveRecommendationFeedback(payload) {
 async function getRecommendationFeedbackStats() {
   const grouped = await (await getRecommendationFeedbackCollection()).aggregate([
     { $group: {
-      _id: "$provider",
-      total: { $sum: 1 },
-      accepted: { $sum: { $cond: ["$accepted", 1, 0] } },
+      _id: { clientId: "$clientId", batchId: "$batchId", provider: "$provider" },
+      votes: { $sum: 1 },
+      acceptedVotes: { $sum: { $cond: ["$accepted", 1, 0] } },
+      batchLimit: { $max: { $ifNull: ["$batchLimit", { $ifNull: ["$batchSize", 2] }] } },
+      expectedVotes: { $max: { $ifNull: ["$batchSize", 2] } },
+    } },
+    { $match: { batchLimit: 3, $expr: { $or: [
+      { $gt: ["$acceptedVotes", 0] },
+      { $gte: ["$votes", "$expectedVotes"] },
+    ] } } },
+    { $group: {
+      _id: "$_id.provider",
+      rounds: { $sum: 1 },
+      successfulRounds: { $sum: { $cond: [{ $gt: ["$acceptedVotes", 0] }, 1, 0] } },
     } },
   ]).toArray();
-  const byProvider = Object.fromEntries(grouped.map(({ _id, total, accepted }) => [
+  const byProvider = Object.fromEntries(grouped.map(({ _id, rounds, successfulRounds }) => [
     _id,
-    { total, accepted, acceptanceRate: total ? Math.round((accepted / total) * 100) : null },
+    { rounds, successfulRounds, acceptanceRate: rounds ? Math.round((successfulRounds / rounds) * 100) : null },
   ]));
-  const gemini = byProvider.gemini || { total: 0, accepted: 0, acceptanceRate: null };
-  const database = byProvider.database || { total: 0, accepted: 0, acceptanceRate: null };
-  const total = gemini.total + database.total;
-  const accepted = gemini.accepted + database.accepted;
+  const gemini = byProvider.gemini || { rounds: 0, successfulRounds: 0, acceptanceRate: null };
+  const database = byProvider.database || { rounds: 0, successfulRounds: 0, acceptanceRate: null };
+  const total = gemini.rounds + database.rounds;
+  const accepted = gemini.successfulRounds + database.successfulRounds;
   return {
-    total,
-    accepted,
+    rounds: total,
+    successfulRounds: accepted,
     acceptanceRate: total ? Math.round((accepted / total) * 100) : null,
     gemini,
     database,
