@@ -55,6 +55,17 @@ export function scoreCandidates(candidates, preferences, maxBudgetThb) {
       continue;
     }
 
+    // Missing fullness tags mean "unknown", not that a menu is not filling.
+    // Only score hunger when every candidate has an explicit fullness tag;
+    // otherwise omit the criterion for this batch instead of assigning 0/100.
+    if (category === "hunger" && !candidates.every((candidate) => {
+      const tags = normalizedTags(candidate);
+      return tags.has("snack") || tags.has("filling");
+    })) {
+      unsupported.push("ความอิ่ม (ข้อมูลร้านยังระบุไม่ครบทุกเมนู)");
+      continue;
+    }
+
     if (!candidates.some((candidate) => normalizedTags(candidate).has(rule.tag))) {
       unsupported.push(`${rule.label} (${rule.tag})`);
       continue;

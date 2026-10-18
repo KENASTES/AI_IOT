@@ -72,6 +72,14 @@ export default defineConfig(async ({ command }) => {
           target: process.env.FOOD_API_ORIGIN ?? "http://127.0.0.1:3001",
           changeOrigin: true,
         },
+        "/api/food/profile": {
+          target: process.env.FOOD_API_ORIGIN ?? "http://127.0.0.1:3001",
+          changeOrigin: true,
+        },
+        "/api/food/cook-history": {
+          target: process.env.FOOD_API_ORIGIN ?? "http://127.0.0.1:3001",
+          changeOrigin: true,
+        },
         "/api/food/recipes": {
           target: process.env.FOOD_API_ORIGIN ?? "http://127.0.0.1:3001",
           changeOrigin: true,

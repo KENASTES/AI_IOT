@@ -14,4 +14,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
 
 # Runs the existing Vinext/Next application on the port used by the Pi's
 # Cloudflare Tunnel setup. Keep the tunnel's localhost:5173 target in sync.
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
+CMD ["npm", "run", "dev", "--", "--hostname", "0.0.0.0", "--port", "5173"]

@@ -115,6 +115,85 @@ async function saveMemory(clientId, menuId) {
   return { ...record, _id: result.insertedId };
 }
 
+function sanitizeProfile(profile) {
+  if (!profile || typeof profile !== "object" || Array.isArray(profile)) throw new Error("ข้อมูลโปรไฟล์ไม่ถูกต้อง");
+  const textFields = ["name", "age", "height", "weight", "allergies", "conditions", "dislikes"];
+  const cleaned = {};
+  for (const field of textFields) {
+    const value = profile[field] ?? "";
+    const maxLength = field === "name" ? 80 : 300;
+    if (typeof value !== "string" || value.length > maxLength) throw new Error(`ข้อมูล ${field} ไม่ถูกต้อง`);
+    cleaned[field] = value.trim();
+  }
+  if (!cleaned.name) throw new Error("กรุณาระบุชื่อโปรไฟล์");
+  for (const field of ["monthlyBudget", "dailyBudget"]) {
+    const value = profile[field];
+    if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 100000) {
+      throw new Error(`ข้อมูลงบประมาณ ${field} ไม่ถูกต้อง`);
+    }
+    cleaned[field] = value;
+  }
+  return cleaned;
+}
+
+function sanitizeCookHistory(history) {
+  if (!history || typeof history !== "object" || Array.isArray(history)) throw new Error("ข้อมูลประวัติการทำอาหารไม่ถูกต้อง");
+  const savedRecipes = Array.isArray(history.savedRecipes) ? history.savedRecipes.slice(0, 20) : [];
+  const recipes = savedRecipes.map((recipe) => {
+    const cleanText = (value, limit) => typeof value === "string" ? value.trim().slice(0, limit) : "";
+    const ingredients = Array.isArray(recipe?.ingredients) ? recipe.ingredients.slice(0, 15).map((value) => cleanText(value, 60)).filter(Boolean) : [];
+    const pantryIngredients = Array.isArray(recipe?.pantryIngredients) ? recipe.pantryIngredients.slice(0, 15).map((value) => cleanText(value, 40)).filter(Boolean) : [];
+    const steps = Array.isArray(recipe?.steps) ? recipe.steps.slice(0, 8).map((value) => cleanText(value, 300)).filter(Boolean) : [];
+    const minutes = Number(recipe?.minutes);
+    const name = cleanText(recipe?.name, 100);
+    if (!name || ingredients.length === 0 || steps.length < 3 || !Number.isInteger(minutes) || minutes < 1 || minutes > 180) {
+      throw new Error("สูตรที่บันทึกมีข้อมูลไม่ครบ");
+    }
+    return { name, summary: cleanText(recipe.summary, 300), minutes, ingredients, pantryIngredients, steps };
+  });
+  const recipeRatings = {};
+  if (history.recipeRatings && typeof history.recipeRatings === "object" && !Array.isArray(history.recipeRatings)) {
+    for (const [name, rating] of Object.entries(history.recipeRatings).slice(0, 50)) {
+      if (typeof rating === "number" && Number.isInteger(rating) && rating >= 1 && rating <= 5) {
+        recipeRatings[name.slice(0, 100)] = rating;
+      }
+    }
+  }
+  const recentRecipeNames = Array.isArray(history.recentRecipeNames)
+    ? [...new Set(history.recentRecipeNames.filter((name) => typeof name === "string").map((name) => name.trim().slice(0, 100)).filter(Boolean))].slice(0, 20)
+    : [];
+  return { savedRecipes: recipes, recipeRatings, recentRecipeNames };
+}
+
+async function getUserProfile(clientId) {
+  if (!validClientId(clientId)) throw new Error("A valid clientId is required");
+  const record = await (await getDatabase()).collection("food_profiles").findOne(
+    { clientId },
+    { projection: { _id: 0, profile: 1, cookHistory: 1 } },
+  );
+  return { profile: record?.profile || null, cookHistory: record?.cookHistory || null };
+}
+
+async function saveUserProfile(clientId, profile) {
+  if (!validClientId(clientId)) throw new Error("A valid clientId is required");
+  const now = new Date();
+  await (await getDatabase()).collection("food_profiles").updateOne(
+    { clientId },
+    { $set: { profile: sanitizeProfile(profile), updatedAt: now }, $setOnInsert: { clientId, createdAt: now } },
+    { upsert: true },
+  );
+}
+
+async function saveCookHistory(clientId, history) {
+  if (!validClientId(clientId)) throw new Error("A valid clientId is required");
+  const now = new Date();
+  await (await getDatabase()).collection("food_profiles").updateOne(
+    { clientId },
+    { $set: { cookHistory: sanitizeCookHistory(history), updatedAt: now }, $setOnInsert: { clientId, createdAt: now } },
+    { upsert: true },
+  );
+}
+
 function normalizeAllergies(values) {
   const inputs = Array.isArray(values) ? values : [];
   const groups = inputs.flatMap((value) => {
@@ -193,6 +272,55 @@ const server = createServer(async (request, response) => {
     } catch (error) {
       console.error("MongoDB stats lookup failed:", error.message);
       sendJson(response, 503, { error: "Could not load live food statistics" });
+    }
+    return;
+  }
+  if (request.method === "GET" && url.pathname === "/api/food/profile") {
+    try {
+      sendJson(response, 200, await getUserProfile(url.searchParams.get("clientId")));
+    } catch (error) {
+      console.error("MongoDB profile lookup failed:", error.message);
+      sendJson(response, 503, { error: "Could not load user profile" });
+    }
+    return;
+  }
+  if (request.method === "PUT" && url.pathname === "/api/food/profile") {
+    let payload;
+    try { payload = await readJson(request); } catch {
+      sendJson(response, 400, { error: "Request body must be valid JSON and no larger than 64 KB" });
+      return;
+    }
+    try {
+      await saveUserProfile(payload?.clientId, payload?.profile);
+      sendJson(response, 200, { saved: true });
+    } catch (error) {
+      console.error("MongoDB profile save failed:", error.message);
+      sendJson(response, 400, { error: error.message || "Could not save user profile" });
+    }
+    return;
+  }
+  if (request.method === "GET" && url.pathname === "/api/food/cook-history") {
+    try {
+      const { cookHistory } = await getUserProfile(url.searchParams.get("clientId"));
+      sendJson(response, 200, { cookHistory });
+    } catch (error) {
+      console.error("MongoDB cooking history lookup failed:", error.message);
+      sendJson(response, 503, { error: "Could not load cooking history" });
+    }
+    return;
+  }
+  if (request.method === "PUT" && url.pathname === "/api/food/cook-history") {
+    let payload;
+    try { payload = await readJson(request); } catch {
+      sendJson(response, 400, { error: "Request body must be valid JSON and no larger than 64 KB" });
+      return;
+    }
+    try {
+      await saveCookHistory(payload?.clientId, payload?.cookHistory);
+      sendJson(response, 200, { saved: true });
+    } catch (error) {
+      console.error("MongoDB cooking history save failed:", error.message);
+      sendJson(response, 400, { error: error.message || "Could not save cooking history" });
     }
     return;
   }

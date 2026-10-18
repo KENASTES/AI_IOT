@@ -47,9 +47,20 @@ test("scores are deterministic for the same preferences and database data", () =
 test("treats the existing hearty tag as the filling preference", () => {
   const result = scoreCandidates([
     { id: "hearty", price: 40, tags: ["hearty"] },
-    { id: "other", price: 40, tags: ["quick"] },
+    { id: "other", price: 40, tags: ["quick", "snack"] },
   ], { hunger: "หิวจนตาลาย" }, 60);
 
   assert.equal(result.recommendations[0].id, "hearty");
   assert.equal(result.unsupportedCriteria.includes("ระดับความอิ่ม (filling)"), false);
+});
+
+test("does not score unknown fullness tags as zero", () => {
+  const result = scoreCandidates([
+    { id: "unknown-fullness", price: 50, tags: ["comfort"] },
+    { id: "known-fullness", price: 50, tags: ["filling"] },
+  ], { hunger: "หิวจนตาลาย" }, 50);
+
+  assert.deepEqual(result.recommendations.map((item) => item.score), [70, 70]);
+  assert.ok(result.recommendations.every((item) => item.scoreBreakdown.every(({ label }) => label !== "ความอิ่ม")));
+  assert.deepEqual(result.unsupportedCriteria, ["ความอิ่ม (ข้อมูลร้านยังระบุไม่ครบทุกเมนู)"]);
 });
