@@ -21,6 +21,7 @@ type Scenario = {
   id: string; badge: string; name: string; shop: string; price: number;
   location: string; score: number; reason: string; image: string;
   tags: string[]; color: string; sourceUrl: string;
+  scoreBreakdown: { label: string; weight: number; score: number }[];
 };
 type LiveStats = { storeCount: number; menuCount: number; memoryCount: number };
 type MemoryItem = { _id: string; menuName: string; storeName: string; price: number; image: string; savedAt: string };
@@ -428,7 +429,7 @@ function EatPage({ profile, needProfile, clientId, addMeal }: { profile: Profile
       let recentIds: string[] = [];
       try {
         const saved: unknown = JSON.parse(localStorage.getItem(recentStorageKey) || localStorage.getItem("forkast-food-recent-menu-ids") || "[]");
-        if (Array.isArray(saved)) recentIds = saved.filter((id): id is string => typeof id === "string").slice(0, 10);
+        if (Array.isArray(saved)) recentIds = saved.filter((id): id is string => typeof id === "string").slice(0, 500);
       } catch { /* Ignore corrupted local history. */ }
       const [budgetAnswer, time, hunger, mood, goal] = nextAnswers;
       const query = [...nextAnswers, profile.dislikes ? `ไม่กิน: ${profile.dislikes}` : "", profile.conditions ? `ข้อจำกัดสุขภาพ: ${profile.conditions}` : ""].filter(Boolean).join("; ");
@@ -439,11 +440,16 @@ function EatPage({ profile, needProfile, clientId, addMeal }: { profile: Profile
       const recommendations = result.recommendations.map((item) => ({
         id: item.id, badge: item.tags[0] || "แนะนำ", name: item.menuName, shop: item.storeName,
         price: item.price, location: item.location, score: item.score,
-        reason: item.matchReasons.join(" · ") || item.text, image: item.image || "/food-noodles.jpg",
+        reason: [
+          `ที่มาคะแนน: ${(item.scoreBreakdown || []).map((part) => `${part.label} ${part.score}/100 (น้ำหนัก ${part.weight}%)`).join(" · ") || "งบและข้อมูลเมนู"}`,
+          "คะแนนจับคู่จากข้อมูล ไม่ใช่ค่าความแม่นยำของ AI",
+          item.matchReasons.join(" · ") || item.text,
+        ].filter(Boolean).join(" · "), image: item.image || "/food-noodles.jpg",
         tags: item.tags, color: item.tags.includes("spicy") ? "#ffb62e" : "#d7ff52", sourceUrl: item.sourceUrl,
+        scoreBreakdown: item.scoreBreakdown || [],
       }));
       setItems(recommendations);
-      const updated = [...recommendations.map((item) => item.id), ...recentIds.filter((id) => !recommendations.some((item) => item.id === id))].slice(0, 10);
+      const updated = [...recommendations.map((item) => item.id), ...recentIds.filter((id) => !recommendations.some((item) => item.id === id))].slice(0, 500);
       try { localStorage.setItem(recentStorageKey, JSON.stringify(updated)); } catch { /* Recommendations still work without local history. */ }
       setStatus(result.message || result.explanation?.message || `จัดอันดับ ${recommendations.length} เมนูจากฐานข้อมูล`);
     } catch (error) {
@@ -469,8 +475,9 @@ function SwipeDeck({ items, loading, onPicked, onNextBatch }: { items: Scenario[
   const [match, setMatch] = useState<Scenario | null>(null);
   useEffect(() => { setIndex(0); setMatch(null); }, [items]);
   if (loading) return <div className="mx-auto w-full max-w-[440px] rounded-[32px] bg-white p-8 text-center shadow-lg"><Sparkles className="mx-auto size-10 animate-pulse text-[#ff5b4d]"/><h2 className="mt-4 text-xl font-black">กำลังหาเมนูที่เหมาะกับคุณ…</h2></div>;
-  if (!items.length) return <div className="mx-auto w-full max-w-[440px] rounded-[32px] bg-white p-8 text-center shadow-lg"><Sparkles className="mx-auto size-10 text-[#ff5b4d]"/><h2 className="mt-4 text-2xl font-black">ยังไม่มีเมนูที่ตรงเงื่อนไข</h2><p className="mt-2 font-semibold text-black/55">ลองปรับคำตอบหรือตรวจการเชื่อมต่อบริการเมนู แล้วค้นใหม่</p><button onClick={onNextBatch} className="mt-5 rounded-full bg-[#17151c] px-5 py-3 font-black text-white">ลองอีกครั้ง</button></div>;
-  const card = items[index % items.length];
+  if (!items.length) return <div className="mx-auto w-full max-w-[440px] rounded-[32px] bg-white p-8 text-center shadow-lg"><Sparkles className="mx-auto size-10 text-[#ff5b4d]"/><h2 className="mt-4 text-2xl font-black">ไม่มีเมนูใหม่ในรอบนี้</h2><p className="mt-2 font-semibold text-black/55">ตรวจเหตุผลด้านซ้าย หรือเปลี่ยนคำตอบเพื่อค้นหาเมนูอื่น โดยระบบจะไม่วนกลับมาแสดงเมนูเดิม</p><button onClick={onNextBatch} className="mt-5 rounded-full bg-[#17151c] px-5 py-3 font-black text-white">ค้นหาอีกครั้ง</button></div>;
+  if (index >= items.length) return <div className="mx-auto w-full max-w-[440px] rounded-[32px] bg-white p-8 text-center shadow-lg"><Sparkles className="mx-auto size-10 text-[#ff5b4d]"/><h2 className="mt-4 text-2xl font-black">ดูครบ {items.length} เมนูในชุดนี้แล้ว</h2><p className="mt-2 font-semibold text-black/55">ขอชุดถัดไปได้เลย เราจะเลี่ยงเมนูที่แสดงไปแล้ว</p><button onClick={onNextBatch} className="mt-5 rounded-full bg-[#17151c] px-5 py-3 font-black text-white">ดูเมนูชุดถัดไป</button></div>;
+  const card = items[index];
   const dismiss = (liked: boolean) => { if (liked) setMatch(card); else setIndex((value) => value + 1); };
   return <div className="relative mx-auto w-full max-w-[440px]"><article className="relative h-[620px] overflow-hidden rounded-[38px] bg-[#17151c] shadow-[0_40px_90px_rgba(22,18,17,.22)]"><img src={card.image} alt={card.name} className="h-full w-full object-cover" /><div className="absolute inset-0 bg-gradient-to-t from-[#17151c] via-black/20 to-black/5"/><div className="absolute inset-x-0 bottom-0 p-6 text-white md:p-7"><div className="flex items-center justify-between"><span className="rounded-full bg-[#d7ff52] px-3 py-1.5 text-sm font-black text-black">{card.score}% MATCH</span><span className="rounded-full bg-white/15 px-3 py-1.5 text-sm font-bold">{card.badge}</span></div><h2 className="mt-4 text-3xl font-black">{card.name}</h2><p className="mt-2 flex items-center gap-1.5 font-bold text-white/80"><MapPin className="size-4"/>{card.shop} · {card.location}</p><div className="mt-4 flex flex-wrap gap-2">{card.tags.map((tag) => <span key={tag} className="rounded-full border border-white/20 bg-black/20 px-3 py-1 text-sm font-bold">{tag}</span>)}</div><p className="mt-4 text-sm font-semibold leading-6 text-white/70">{card.reason}</p><div className="mt-5 flex items-center justify-between border-t border-white/15 pt-5"><div><b className="block text-xl">฿{card.price}</b><span className="text-xs text-white/55">ราคาจากฐานข้อมูล</span></div>{card.sourceUrl && <a href={card.sourceUrl} target="_blank" rel="noreferrer" className="text-sm font-bold underline">ดูแหล่งข้อมูลร้าน</a>}</div></div></article><div className="mt-6 flex items-center justify-center gap-4"><button onClick={() => setIndex((value) => Math.max(0, value - 1))} aria-label="ย้อนเมนู" className="grid size-12 place-items-center rounded-full bg-white text-[#ffb62e] shadow-lg"><RotateCcw/></button><button onClick={() => dismiss(false)} aria-label="ผ่านเมนูนี้" className="grid size-16 place-items-center rounded-full bg-white text-[#ff5b4d] shadow-xl"><X className="size-8"/></button><button onClick={() => dismiss(true)} aria-label="เลือกเมนูนี้" className="grid size-16 place-items-center rounded-full bg-[#d7ff52] shadow-xl"><Heart className="size-8 fill-current"/></button><button onClick={onNextBatch} aria-label="เมนูชุดใหม่" className="grid size-12 place-items-center rounded-full bg-[#17151c] text-[#d7ff52] shadow-lg"><Zap className="fill-current"/></button></div>{match && <div className="fixed inset-0 z-[70] grid place-items-center bg-black/45 p-5"><div className="w-full max-w-sm rounded-[28px] bg-white p-6 text-center"><h3 className="text-2xl font-black">เลือก {match.name}?</h3><p className="mt-2 text-sm font-semibold text-black/55">บันทึกลง Food Memory ของคุณ</p><div className="mt-5 flex gap-3"><button onClick={() => setMatch(null)} className="flex-1 rounded-xl bg-black/5 py-3 font-black">ยกเลิก</button><button onClick={() => { onPicked(match); setMatch(null); }} className="flex-1 rounded-xl bg-[#d7ff52] py-3 font-black">เลือกมื้อนี้</button></div></div></div>}</div>;
 }

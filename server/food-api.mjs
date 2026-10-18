@@ -265,7 +265,7 @@ const server = createServer(async (request, response) => {
     || !payload.preferences || typeof payload.preferences !== "object"
     || ["time", "hunger", "mood", "goal"].some((key) => typeof payload.preferences[key] !== "string" || payload.preferences[key].length > 100)
     || (payload.recentMenuIds !== undefined && (!Array.isArray(payload.recentMenuIds)
-      || payload.recentMenuIds.length > 20
+      || payload.recentMenuIds.length > 500
       || payload.recentMenuIds.some((id) => typeof id !== "string" || id.length > 200)))) {
     sendJson(response, 400, { error: "Provide a query, valid maximum budget, and allergy list" });
     return;
@@ -300,6 +300,9 @@ const server = createServer(async (request, response) => {
   sendJson(response, 200, {
     ...result,
     recommendations: explained.recommendations,
+    message: explained.recommendations.length
+      ? result.message
+      : "คุณดูเมนูที่ผ่านเงื่อนไขครบแล้ว เริ่มรอบใหม่หรือเปลี่ยนคำตอบเพื่อค้นหาอีกครั้ง",
     explanation: { provider: explained.provider, message: explained.message },
     provider: "database",
   });

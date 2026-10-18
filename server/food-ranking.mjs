@@ -72,8 +72,14 @@ export function scoreCandidates(candidates, preferences, maxBudgetThb) {
   const totalWeight = criteria.reduce((total, criterion) => total + criterion.weight, 0);
   const ranked = candidates.map((candidate) => {
     const matchReasons = [];
+    const scoreBreakdown = [];
     const weightedScore = criteria.reduce((total, criterion) => {
       const criterionScore = criterion.score(candidate);
+      scoreBreakdown.push({
+        label: criterion.label,
+        weight: Math.round((criterion.weight / totalWeight) * 100),
+        score: Math.round(criterionScore),
+      });
       if (criterion.tag) {
         matchReasons.push(normalizedTags(candidate).has(criterion.tag)
           ? `ตรงกับ “${criterion.answer}” (${criterion.tag})`
@@ -88,12 +94,13 @@ export function scoreCandidates(candidates, preferences, maxBudgetThb) {
       ...candidate,
       score: Math.round(weightedScore / totalWeight),
       matchReasons,
+      scoreBreakdown,
     };
   }).sort((a, b) => b.score - a.score || a.price - b.price || a.id.localeCompare(b.id));
 
   const evaluatedCriteria = [...new Set(criteria.map((criterion) => criterion.label))];
   const message = [
-    `คะแนนเทียบจาก ${evaluatedCriteria.join(" + ")} ตามข้อมูลร้านและเมนู (งบและอาหารที่แพ้เป็นตัวกรองบังคับ)`,
+    `คะแนน Match คำนวณจาก ${criteria.map((criterion) => `${criterion.label} ${Math.round((criterion.weight / totalWeight) * 100)}%`).join(" + ")} ตามข้อมูลร้านและเมนู ไม่ใช่ค่าความแม่นยำของ AI (งบและอาหารที่แพ้เป็นตัวกรองบังคับ)`,
     unsupported.length ? `ยังไม่รวมเกณฑ์ที่ฐานข้อมูลไม่มีข้อมูล: ${unsupported.join(", ")}` : "",
   ].filter(Boolean).join(" · ");
 

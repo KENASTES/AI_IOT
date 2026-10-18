@@ -85,7 +85,8 @@ function fallback(recommendations, preferences, budget, recentIds = [], random =
 function makeSelectionPool(recommendations, recentIds) {
   const recent = new Set(Array.isArray(recentIds) ? recentIds : []);
   const fresh = recommendations.filter((candidate) => !recent.has(candidate.id));
-  const candidates = fresh.length >= 2 ? fresh : recommendations;
+  // Never re-introduce a recently shown item just to fill a two-card batch.
+  const candidates = fresh;
   if (candidates.length <= 2) return candidates;
   // Keep a reasonable relevance band while allowing more distinct menus to rotate in.
   const scoreFloor = candidates[0].score - 25;

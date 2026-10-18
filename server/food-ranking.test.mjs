@@ -17,6 +17,10 @@ test("scores menu tags and budget preferences instead of returning a 50% baselin
   assert.equal(result.recommendations[0].score, 95);
   assert.equal(result.recommendations[1].score, 28);
   assert.match(result.recommendations[0].matchReasons.join(" "), /spicy/u);
+  assert.deepEqual(result.recommendations[0].scoreBreakdown.map(({ label, score }) => [label, score]), [
+    ["งบ", 85], ["เวลา", 100], ["อารมณ์", 100],
+  ]);
+  assert.match(result.message, /คะแนน Match คำนวณจาก งบ \d+% \+ เวลา \d+% \+ อารมณ์ \d+%/u);
 });
 
 test("marks a preference unsupported when MongoDB candidates have no matching tag", () => {

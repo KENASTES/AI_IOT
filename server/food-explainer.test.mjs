@@ -98,3 +98,25 @@ test("recently displayed IDs are avoided and the fallback prefers different stor
   assert.ok(result.recommendations.every((item) => item.id !== "menu-1" && item.id !== "menu-2"));
   assert.notEqual(result.recommendations[0].storeName, result.recommendations[1].storeName);
 });
+
+test("does not repeat recent menus even when fewer than two fresh menus remain", async () => {
+  const pool = [
+    ...recommendations,
+    { id: "menu-3", menuName: "ข้าวหมู", storeName: "ร้านสาม", score: 86, price: 48, tags: ["filling"], matchReasons: [] },
+  ];
+  const result = await explainRecommendations(pool, preferences, 60, ["menu-1", "menu-2"], {
+    apiKey: "",
+    random: () => 0,
+  });
+
+  assert.deepEqual(result.recommendations.map((item) => item.id), ["menu-3"]);
+});
+
+test("returns no menus rather than repeating when every candidate was recently displayed", async () => {
+  const result = await explainRecommendations(recommendations, preferences, 60, ["menu-1", "menu-2"], {
+    apiKey: "",
+    random: () => 0,
+  });
+
+  assert.deepEqual(result.recommendations, []);
+});

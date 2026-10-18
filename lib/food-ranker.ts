@@ -10,6 +10,7 @@ export type FoodRecommendation = {
   text: string;
   score: number;
   matchReasons: string[];
+  scoreBreakdown?: { label: string; weight: number; score: number }[];
 };
 
 export type FoodRankConstraints = {
