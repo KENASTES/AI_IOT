@@ -634,6 +634,8 @@ function MemoryPage({ profile, clientId }: { profile: Profile; clientId: string 
   const [items, setItems] = useState<MemoryItem[]>([]);
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [error, setError] = useState("");
   useEffect(() => {
     if (!clientId) return;
     fetch(`/api/food/memory?clientId=${encodeURIComponent(clientId)}`, { cache: "no-store" })
@@ -642,7 +644,21 @@ function MemoryPage({ profile, clientId }: { profile: Profile; clientId: string 
       .catch(() => { setItems([]); setCount(0); })
       .finally(() => setLoading(false));
   }, [clientId]);
-  return <section className="mx-auto max-w-7xl px-5 py-10 md:px-10 md:py-14"><div className="flex flex-wrap items-end justify-between gap-5"><div><span className="text-sm font-black tracking-[.18em] text-[#ff5b4d]">FOOD MEMORY</span><h1 className="mt-2 text-5xl font-black tracking-[-.06em] md:text-7xl">ยิ่งกิน ยิ่งรู้ใจ</h1><p className="mt-2 font-semibold text-black/45">{count} มื้อที่บันทึกไว้ · {profile.name || "โปรไฟล์ของคุณ"}</p></div><div className="rounded-full bg-[#17151c] px-5 py-3 text-sm font-black text-white">FOOD MEMORY</div></div>{loading ? <p className="mt-8 rounded-3xl bg-white p-8 text-center font-semibold text-black/50">กำลังโหลดข้อมูลจากฐานข้อมูล…</p> : items.length ? <div className="mt-8 grid gap-5 md:grid-cols-3">{items.map((item) => <article key={item._id} className="overflow-hidden rounded-[28px] bg-white p-3 shadow-[0_20px_50px_rgba(30,24,20,.08)]"><div className="h-52 overflow-hidden rounded-[20px]"><img src={item.image || "/food-noodles.jpg"} alt={item.menuName} className="h-full w-full object-cover"/></div><div className="p-3"><h2 className="text-xl font-black">{item.menuName}</h2><p className="mt-1 text-sm font-semibold text-black/45">{item.storeName} · {new Date(item.savedAt).toLocaleString("th-TH")}</p><b className="mt-4 block">฿{item.price}</b></div></article>)}</div> : <p className="mt-8 rounded-3xl bg-white p-8 text-center font-semibold text-black/50">ยังไม่มีมื้อที่บันทึก เลือกเมนูที่ชอบจากหน้า Match เพื่อเพิ่มลง Food Memory</p>}</section>;
+  const removeItem = async (item: MemoryItem) => {
+    if (!window.confirm(`ลบ “${item.menuName}” ออกจาก Food Memory ใช่ไหม?`)) return;
+    setDeletingId(item._id);
+    setError("");
+    try {
+      await deleteFoodMemory(clientId, item._id);
+      setItems((current) => current.filter((saved) => saved._id !== item._id));
+      setCount((current) => Math.max(0, current - 1));
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "ลบ Food Memory ไม่สำเร็จ ลองอีกครั้ง");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+  return <section className="mx-auto max-w-7xl px-5 py-10 md:px-10 md:py-14"><div className="flex flex-wrap items-end justify-between gap-5"><div><span className="text-sm font-black tracking-[.18em] text-[#ff5b4d]">FOOD MEMORY</span><h1 className="mt-2 text-5xl font-black tracking-[-.06em] md:text-7xl">ยิ่งกิน ยิ่งรู้ใจ</h1><p className="mt-2 font-semibold text-black/45">{count} มื้อที่บันทึกไว้ · {profile.name || "โปรไฟล์ของคุณ"}</p></div><div className="rounded-full bg-[#17151c] px-5 py-3 text-sm font-black text-white">FOOD MEMORY</div></div>{error && <p role="alert" className="mt-5 rounded-2xl bg-[#fff0ef] p-4 text-sm font-bold text-[#d43d32]">{error}</p>}{loading ? <p className="mt-8 rounded-3xl bg-white p-8 text-center font-semibold text-black/50">กำลังโหลดข้อมูลจากฐานข้อมูล…</p> : items.length ? <div className="mt-8 grid gap-5 md:grid-cols-3">{items.map((item) => <article key={item._id} className="overflow-hidden rounded-[28px] bg-white p-3 shadow-[0_20px_50px_rgba(30,24,20,.08)]"><div className="h-52 overflow-hidden rounded-[20px]"><img src={item.image || "/food-noodles.jpg"} alt={item.menuName} className="h-full w-full object-cover"/></div><div className="p-3"><h2 className="text-xl font-black">{item.menuName}</h2><p className="mt-1 text-sm font-semibold text-black/45">{item.storeName} · {new Date(item.savedAt).toLocaleString("th-TH")}</p><div className="mt-4 flex items-center justify-between"><b>฿{item.price}</b><button type="button" onClick={() => void removeItem(item)} disabled={deletingId === item._id} aria-label={`ลบ ${item.menuName} จาก Food Memory`} className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-bold text-[#d43d32] transition hover:bg-[#fff0ef] disabled:cursor-wait disabled:opacity-50"><Trash2 className="size-4" />{deletingId === item._id ? "กำลังลบ…" : "ลบ"}</button></div></div></article>)}</div> : <p className="mt-8 rounded-3xl bg-white p-8 text-center font-semibold text-black/50">ยังไม่มีมื้อที่บันทึก เลือกเมนูที่ชอบจากหน้า Match เพื่อเพิ่มลง Food Memory</p>}</section>;
 }
 
 export default function Home() {
